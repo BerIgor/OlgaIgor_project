@@ -1,0 +1,3 @@
+move 1 5 3
+My name is olga
+rotate 3 6
