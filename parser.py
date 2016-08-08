@@ -26,8 +26,19 @@ def forward (direction, speed, duration):
 	cmd_vel.publish(Twist())
 
 
-def rotate (angle, duration):
-	print 'This should rotate clockwise at ' + angle + ' radians for second, during ' + duration + ' seconds.'
+def rotate (direction, speed, duration):
+	print 'This should rotate clockwise at ' + speed + ' radians for second, during ' + duration + ' seconds.'
+	move_cmd = Twist()
+	move_cmd.linear.x = 0
+	move_cmd.angular.z= float(direction)*float(speed)
+	timeout = time.time() + float(duration)
+	while True:
+		if time.time() > timeout:
+			break
+		else:
+			cmd_vel.publish(move_cmd)
+			r.sleep()
+	cmd_vel.publish(Twist())
 
 
 def file__parse(file_path):
@@ -37,7 +48,7 @@ def file__parse(file_path):
 		if line_arr[0] == 'move':
 			forward(line_arr[1], line_arr[2], line_arr[3])
 		elif line_arr[0] == 'rotate':
-			rotate(line_arr[1], line_arr[2])
+			rotate(line_arr[1], line_arr[2], line_arr[3])
 		else:
 			print "The entered command: " + str(line_arr[:])+ " is illegal."
 
