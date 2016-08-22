@@ -14,15 +14,26 @@ cmd_vel = None
 def forward (direction, speed, duration):
 	print 'This should go forward at ' + speed + ' meters for second, during ' + duration + ' seconds.'
 	move_cmd = Twist()
-	move_cmd.linear.x = float(direction)*float(speed)
 	move_cmd.angular.z=0
+	x=0.01
+	while x < 0.2:
+		move_cmd.linear.x = float(direction)*float(x)
+		x += 0.01
+		cmd_vel.publish(move_cmd)
+		rospy.sleep(0.1)
 	timeout = time.time() + float(duration)
+	move_cmd.linear.x = float(direction)*float(speed)
 	while True:
 		if time.time() > timeout:
 			break
 		else:
 			cmd_vel.publish(move_cmd)
 			r.sleep()
+	while x > 0:
+		move_cmd.linear.x = float(direction)*float(x)
+		x -= 0.01
+		cmd_vel.publish(move_cmd)
+		rospy.sleep(0.1)
 	cmd_vel.publish(Twist())
 
 
