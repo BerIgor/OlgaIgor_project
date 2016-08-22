@@ -16,7 +16,7 @@ def forward (direction, speed, duration):
 	move_cmd = Twist()
 	move_cmd.angular.z=0
 	x=0.01
-	while x < 0.2:
+	while x < float(speed):
 		move_cmd.linear.x = float(direction)*float(x)
 		x += 0.01
 		cmd_vel.publish(move_cmd)
