@@ -62,6 +62,8 @@ def file__parse(file_path):
 			rotate(line_arr[1], line_arr[2], line_arr[3])
 		else:
 			print "The entered command: " + str(line_arr[:])+ " is illegal."
+		rospy.sleep(1)
+		
 
 
 def shutdown():
