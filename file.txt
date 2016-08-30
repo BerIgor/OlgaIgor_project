@@ -1,2 +1,0 @@
-move 1 0.5 3
-rotate 1 1 5
