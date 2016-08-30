@@ -79,4 +79,4 @@ if __name__ == "__main__":
 	cmd_vel = rospy.Publisher('cmd_vel_mux/input/navi', Twist, queue_size=10)
 	r = rospy.Rate(10)
 #	rospy.on_shutdown(shutdown())
-	file__parse('file.txt')
+	file__parse('corridor2.txt')
