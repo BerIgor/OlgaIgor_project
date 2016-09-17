@@ -28,7 +28,7 @@ class Plane2DEnvironment{
     Plane2DEnvironment(const char* ppm_file){
         bool ok=false;
         try {   //opening the file
-            ppm_.loadFile(ppm_file)
+            ppm_.loadFile(ppm_file);
             ok = true;
         } catch (ompl::Exception &ex) {
             OMPL_ERROR("Unable to load %s.\n%s", ppm_file, ex.what());
@@ -126,10 +126,10 @@ class Plane2DEnvironment{
 int main(int, char **){
     std::cout << "OMPL version: " << OMPL_VERSION << std::endl;
 
-    boost::filesystem::path path(TEST_RESOURCES_DIR);
-    Plane2DEnvironment env((path / "ppm/floor.ppm").string().c_str());
- 
-    if (env.plan(0, 0, 777, 1265)){
+    //boost::filesystem::path path(TEST_RESOURCES_DIR);
+//    Plane2DEnvironment env((path / "ppm/floor.ppm").string().c_str());
+    Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/toConvert.ppm");
+    if (env.plan(15, 15, 78, 57)){
         env.recordSolution();
         env.save("result_demo.ppm");
     }
