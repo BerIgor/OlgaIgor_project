@@ -35,14 +35,14 @@ void planWithSimpleSetup(void){
 
 
 int main(int argc, char* argv){
-    
+    std::cout << "main() beginning" << std::endl;
     ob::RealVectorBounds rlvb(2);
     rlvb.setLow(4);
     rlvb.setHigh(4);
     
     ob::StateSpacePtr space(new ob::SE2StateSpace());
     
-    
+    std::cout << "main() ending" << std::endl;
     
 
     return 0;
