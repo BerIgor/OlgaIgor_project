@@ -12,7 +12,10 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 #include <ompl/util/PPM.h>
 #include <ompl/config.h>
 //#include <../tests/resources/config.h>
+#include <ompl/geometric/PathSimplifier.h>
  
+
+
 #include <boost/filesystem.hpp>
 #include <iostream>
 
@@ -81,8 +84,9 @@ class Plane2DEnvironment{
         if (ss_->haveSolutionPath()){
             //ss_->simplifySolution();
             og::PathGeometric &p = ss_->getSolutionPath();
-            //ss_->getPathSimplifier()->simplifyMax(p);
+            og::PathSimplifierPtr& pathSimplifier = ss_->getPathSimplifier();//->simplifyMax(p);
             //ss_->getPathSimplifier()->smoothBSpline(p);
+            pathSimplifier->reduceVertices(p, 0, 0, 1);
             return true;
         } else {
             return false;
@@ -139,7 +143,7 @@ int main(int, char **){
     Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/toConvert.ppm");
     if (env.plan(15, 15, 78, 57)){
         env.recordSolution();
-        env.save("result_demo2.ppm");
+        env.save("reduce_vertices.ppm");
     }
     return 0;
 }
