@@ -61,13 +61,21 @@ class Plane2DEnvironment{
         goal[0] = goal_row;
         goal[1] = goal_col;
         ss_->setStartAndGoalStates(start, goal);
+        
+        if (ss_->getPlanner()){
+            ss_->getPlanner()->clear();
+        }
+        ss_->solve();  
+        
         // generate a few solutions; all will be added to the goal;
+        /*
         for (int i = 0 ; i < 10 ; ++i){
             if (ss_->getPlanner()){ //IGOR:this gets a random planner. We should choose the best planner. for more details visit http://ompl.kavrakilab.org/classompl_1_1geometric_1_1SimpleSetup.html#a8a94558b2ece27d938a92b062d55df71
                 ss_->getPlanner()->clear();
             }
             ss_->solve();
         }
+        */
         const std::size_t ns = ss_->getProblemDefinition()->getSolutionCount();
         OMPL_INFORM("Found %d solutions", (int)ns);
         if (ss_->haveSolutionPath()){
@@ -131,7 +139,7 @@ int main(int, char **){
     Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/toConvert.ppm");
     if (env.plan(15, 15, 78, 57)){
         env.recordSolution();
-        env.save("result_demo.ppm");
+        env.save("result_demo2.ppm");
     }
     return 0;
 }
