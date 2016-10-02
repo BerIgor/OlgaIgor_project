@@ -14,7 +14,7 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 //#include <../tests/resources/config.h>
 #include <ompl/geometric/PathSimplifier.h>
 #include <ompl/base/State.h>
-
+#include <ompl/base/spaces/SE2StateSpace.h>
 #include <vector>
 #include <boost/filesystem.hpp>
 #include <iostream>
@@ -93,12 +93,19 @@ class Plane2DEnvironment{
             std::cout << "Printing in matrix form" << std::endl;
             p.printAsMatrix(std::cout);
 
-std::cout<<"hi"<<std::endl;
+
 			//IGOR: now trying to access each state on its own
 			std::vector< ob::State * > waypoints = p.getStates();
-std::cout<<"hi"<<std::endl;
 			for(std::vector< ob::State * > ::iterator it = waypoints.begin(); it!=waypoints.end(); ++it){
-				std::cout<<"hi"<<std::endl;//it->
+				//TODO: SE2StateSpace inherits from State class. 
+				//Now tryint to cast the it->    as an SE2StateSpace and access the X, Y coordinates
+				//and compundStateSpace inherits them all
+
+				ob::SE2StateSpace::StateType *se2state = (*it)->as <ob::SE2StateSpace::StateType>();
+				//for games with States see https://github.com/ompl/ompl/blob/master/demos/PlannerData.cpp
+				const double x = se2state->getX();
+				//std::cout<<"X="<< se2state->getX() <<" ; Y="<< se2state->getY() <<std::endl;
+				std::cout<<"hi"<<std::endl;
 			}
 
 
