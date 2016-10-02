@@ -6,13 +6,13 @@ LIBS = -lompl -lboost_system
 PLANNER = planner
 PLANNER_OBJS = src/planner.o
 
-planner.o: src/planner.cpp
-		$(CC) -c $(FLAGS) src/planner.cpp $(LIBS)
-
-$(PLANNER) : $(PLANNER_OBJS) 
-		$(CC) $(FLAGS) $(INCLUDE) $(PLANNER_OBJS) $(LIBDIR) $(LIBS) -o $@
-
 all: $(PLANNER)
+
+$(PLANNER) : $(PLANNER_OBJS)
+	$(CC) $(FLAGS) $(INCLUDE) $(PLANNER_OBJS) $(LIBDIR) $(LIBS) -o $@
+
+$(PLANNER_OBJS): src/planner.cpp
+	$(CC) -c $(FLAGS) src/planner.cpp $(LIBS)
 
 clean:
 	rm -f $(PLANNER_OBJS)

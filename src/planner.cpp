@@ -13,9 +13,9 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 #include <ompl/config.h>
 //#include <../tests/resources/config.h>
 #include <ompl/geometric/PathSimplifier.h>
- 
+#include <ompl/base/State.h>
 
-
+#include <vector>
 #include <boost/filesystem.hpp>
 #include <iostream>
 
@@ -89,10 +89,19 @@ class Plane2DEnvironment{
             pathSimplifier->reduceVertices(p, 0, 0, 1);
 
             //IGOR: now trying to print the solution
-//            std::ostream::cout os();
             p.print(std::cout);
-            std::cout << "Printing second variant" << std::endl;
+            std::cout << "Printing in matrix form" << std::endl;
             p.printAsMatrix(std::cout);
+
+std::cout<<"hi"<<std::endl;
+			//IGOR: now trying to access each state on its own
+			std::vector< ob::State * > waypoints = p.getStates();
+std::cout<<"hi"<<std::endl;
+			for(std::vector< ob::State * > ::iterator it = waypoints.begin(); it!=waypoints.end(); ++it){
+				std::cout<<"hi"<<std::endl;//it->
+			}
+
+
             return true;
         } else {
             return false;
