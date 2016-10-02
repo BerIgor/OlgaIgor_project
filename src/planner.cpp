@@ -87,6 +87,12 @@ class Plane2DEnvironment{
             og::PathSimplifierPtr& pathSimplifier = ss_->getPathSimplifier();//->simplifyMax(p);
             //ss_->getPathSimplifier()->smoothBSpline(p);
             pathSimplifier->reduceVertices(p, 0, 0, 1);
+
+            //IGOR: now trying to print the solution
+//            std::ostream::cout os();
+            p.print(std::cout);
+            std::cout << "Printing second variant" << std::endl;
+            p.printAsMatrix(std::cout);
             return true;
         } else {
             return false;
