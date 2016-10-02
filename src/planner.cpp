@@ -79,10 +79,10 @@ class Plane2DEnvironment{
         const std::size_t ns = ss_->getProblemDefinition()->getSolutionCount();
         OMPL_INFORM("Found %d solutions", (int)ns);
         if (ss_->haveSolutionPath()){
-            ss_->simplifySolution();
+            //ss_->simplifySolution();
             og::PathGeometric &p = ss_->getSolutionPath();
-            ss_->getPathSimplifier()->simplifyMax(p);
-            ss_->getPathSimplifier()->smoothBSpline(p);
+            //ss_->getPathSimplifier()->simplifyMax(p);
+            //ss_->getPathSimplifier()->smoothBSpline(p);
             return true;
         } else {
             return false;
