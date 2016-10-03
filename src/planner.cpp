@@ -41,7 +41,7 @@ class Plane2DEnvironment{
         if(ok) {
             ob::RealVectorStateSpace *space = new ob::RealVectorStateSpace();
             space->addDimension(0.0, ppm_.getWidth());
-            space->addDimension(0.0, ppm_.getHeight());
+            space->addDimension(0.0, ppm_.getHeight());	
             maxWidth_ = ppm_.getWidth() - 1;
             maxHeight_ = ppm_.getHeight() - 1;
             ss_.reset(new og::SimpleSetup(ob::StateSpacePtr(space)));
