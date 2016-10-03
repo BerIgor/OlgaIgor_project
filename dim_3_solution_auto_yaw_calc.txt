@@ -1,0 +1,13 @@
+Solution in base form
+Geometric path with 4 states
+RealVectorState [15 15 0]
+RealVectorState [50.5701 12.9369 66.7902]
+RealVectorState [28.3248 70.268 21.5473]
+RealVectorState [78 57 0]
+
+Solution in matrix form
+15 15 0 
+50.5701 12.9369 66.7902 
+28.3248 70.268 21.5473 
+78 57 0 
+
