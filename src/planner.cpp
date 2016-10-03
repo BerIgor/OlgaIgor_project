@@ -82,44 +82,18 @@ class Plane2DEnvironment{
         const std::size_t ns = ss_->getProblemDefinition()->getSolutionCount();
         OMPL_INFORM("Found %d solutions", (int)ns);
         if (ss_->haveSolutionPath()){
-            //ss_->simplifySolution();
+			//Simplifying solution
             og::PathGeometric &p = ss_->getSolutionPath();
             og::PathSimplifierPtr& pathSimplifier = ss_->getPathSimplifier();//->simplifyMax(p);
-            //ss_->getPathSimplifier()->smoothBSpline(p);
             pathSimplifier->reduceVertices(p, 0, 0, 1);
 
-            //IGOR: now trying to print the solution
+			//TODO: add path shortening
+
+            //Printing the solution
+			std::cout << "Solution in base form" << std::endl;
             p.print(std::cout);
-            std::cout << "Printing in matrix form" << std::endl;
+            std::cout << "Solution in matrix form" << std::endl;
             p.printAsMatrix(std::cout);
-
-
-			//IGOR: now trying to access each state on its own
-			std::vector< ob::State * >& waypoints = p.getStates();
-			for(int i=0; i<waypoints.size(); i++){
-
-				std::cout<<"dsfsa"<<std::endl;
-				ob::State* state=waypoints[i];
-    	        const int w = (int)state->as<ob::RealVectorStateSpace::StateType>()->values[0];
-	            const int h = (int)state->as<ob::RealVectorStateSpace::StateType>()->values[1];
-				std::cout<<"X="<<w<<" ; Y="<<h<<std::endl;
-
-			}
-/*			for(std::vector<ob::State*>::iterator it = waypoints.begin(); it!=waypoints.end(); ++it){
-				//TODO: SE2StateSpace inherits from State class. 
-				//Now tryint to cast the it->    as an SE2StateSpace and access the X, Y coordinates
-				//and compundStateSpace inherits them all
-				std::vector<ob::State*>::iterator it2=it; 
-        		double x = (*it2)->as<ob::SE2StateSpace::StateType>()->getX();
-				//double x=*it -> as<ob::SE2StateSpace::StateType>()->getX();
-				//std::cout<<x<<std::endl;
-				//ob::SE2StateSpace::StateType *se2state = (*it)->as <ob::SE2StateSpace::StateType>();
-				//for games with States see https://github.com/ompl/ompl/blob/master/demos/PlannerData.cpp
-//printf("state=%p; target_of_it=%p\n", se2state, it);
-				//const double x = se2state->getX();
-				//std::cout<<"X="<< se2state->getX() <<" ; Y="<< se2state->getY() <<std::endl;
-				std::cout<<"hi"<<std::endl;
-			}*/
 
 
             return true;
@@ -168,6 +142,22 @@ class Plane2DEnvironment{
     int maxHeight_;
     ompl::PPM ppm_;
     
+	void getOrders(){
+		og::PathGeometric &p = ss_->getSolutionPath();
+
+		//Accessing each waypoint on the path
+		std::vector< ob::State * >& waypoints = p.getStates();
+		for(int i=0; i<waypoints.size(); i++){
+			ob::State* state=waypoints[i];
+	        const double X = (double)state->as<ob::RealVectorStateSpace::StateType>()->values[0];
+            const double Y = (double)state->as<ob::RealVectorStateSpace::StateType>()->values[1];
+			std::cout<<"X="<<X<<" ; Y="<<Y<<std::endl;
+		}		
+	}	
+
+
+
+
 }; //end of class
     
 int main(int, char **){
@@ -177,6 +167,7 @@ int main(int, char **){
 //    Plane2DEnvironment env((path / "ppm/floor.ppm").string().c_str());
     Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/toConvert.ppm");
     if (env.plan(15, 15, 78, 57)){
+		env.getOrders();
         env.recordSolution();
         env.save("reduce_vertices.ppm");
     }
