@@ -95,15 +95,26 @@ class Plane2DEnvironment{
 
 
 			//IGOR: now trying to access each state on its own
-			std::vector< ob::State * > waypoints = p.getStates();
-			for(std::vector< ob::State * > ::iterator it = waypoints.begin(); it!=waypoints.end(); ++it){
+			std::vector< ob::State * >& waypoints = p.getStates();
+			for(int i=0; i<waypoints.size(); i++){
+
+				std::cout<<"dsfsa"<<std::endl;
+				ob::State* state=waypoints[i];
+				double x= (state->as<ob::SE2StateSpace::StateType>())->getX();
+			}
+			return true;
+			for(std::vector<ob::State*>::iterator it = waypoints.begin(); it!=waypoints.end(); ++it){
 				//TODO: SE2StateSpace inherits from State class. 
 				//Now tryint to cast the it->    as an SE2StateSpace and access the X, Y coordinates
 				//and compundStateSpace inherits them all
-
-				ob::SE2StateSpace::StateType *se2state = (*it)->as <ob::SE2StateSpace::StateType>();
+				std::vector<ob::State*>::iterator it2=it; 
+        		double x = (*it2)->as<ob::SE2StateSpace::StateType>()->getX();
+				//double x=*it -> as<ob::SE2StateSpace::StateType>()->getX();
+				//std::cout<<x<<std::endl;
+				//ob::SE2StateSpace::StateType *se2state = (*it)->as <ob::SE2StateSpace::StateType>();
 				//for games with States see https://github.com/ompl/ompl/blob/master/demos/PlannerData.cpp
-				const double x = se2state->getX();
+//printf("state=%p; target_of_it=%p\n", se2state, it);
+				//const double x = se2state->getX();
 				//std::cout<<"X="<< se2state->getX() <<" ; Y="<< se2state->getY() <<std::endl;
 				std::cout<<"hi"<<std::endl;
 			}
