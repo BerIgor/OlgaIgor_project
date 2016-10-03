@@ -100,10 +100,12 @@ class Plane2DEnvironment{
 
 				std::cout<<"dsfsa"<<std::endl;
 				ob::State* state=waypoints[i];
-				double x= (state->as<ob::SE2StateSpace::StateType>())->getX();
+    	        const int w = (int)state->as<ob::RealVectorStateSpace::StateType>()->values[0];
+	            const int h = (int)state->as<ob::RealVectorStateSpace::StateType>()->values[1];
+				std::cout<<"X="<<w<<" ; Y="<<h<<std::endl;
+
 			}
-			return true;
-			for(std::vector<ob::State*>::iterator it = waypoints.begin(); it!=waypoints.end(); ++it){
+/*			for(std::vector<ob::State*>::iterator it = waypoints.begin(); it!=waypoints.end(); ++it){
 				//TODO: SE2StateSpace inherits from State class. 
 				//Now tryint to cast the it->    as an SE2StateSpace and access the X, Y coordinates
 				//and compundStateSpace inherits them all
@@ -117,7 +119,7 @@ class Plane2DEnvironment{
 				//const double x = se2state->getX();
 				//std::cout<<"X="<< se2state->getX() <<" ; Y="<< se2state->getY() <<std::endl;
 				std::cout<<"hi"<<std::endl;
-			}
+			}*/
 
 
             return true;
