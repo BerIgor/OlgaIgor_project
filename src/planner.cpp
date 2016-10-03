@@ -39,9 +39,21 @@ class Plane2DEnvironment{
         
         //TODO: fucking change this giant if around        
         if(ok) {
-            ob::RealVectorStateSpace *space = new ob::RealVectorStateSpace();
-            space->addDimension(0.0, ppm_.getWidth());
-            space->addDimension(0.0, ppm_.getHeight());	
+			ob::SE2StateSpace *space = new ob::SE2StateSpace();
+
+//define bounds
+			ob::RealVectorBounds bounds(2);
+			bounds.setLow(0, 0);
+			bounds.setHigh(0, ppm_.getWidth());
+
+			bounds.setLow(1, 0);
+			bounds.setHigh(1, ppm_.getHeight());
+
+			//bounds.setLow(2, 0);
+			//bounds.setHigh(2, 360);
+			space->setBounds(bounds);			
+
+
             maxWidth_ = ppm_.getWidth() - 1;
             maxHeight_ = ppm_.getHeight() - 1;
             ss_.reset(new og::SimpleSetup(ob::StateSpacePtr(space)));
@@ -60,9 +72,11 @@ class Plane2DEnvironment{
         ob::ScopedState<> start(ss_->getStateSpace());
         start[0] = start_row;
         start[1] = start_col;
+		start[2] = 0;
         ob::ScopedState<> goal(ss_->getStateSpace());
         goal[0] = goal_row;
         goal[1] = goal_col;
+		goal[2] = 0;
         ss_->setStartAndGoalStates(start, goal);
         
         if (ss_->getPlanner()){
@@ -109,8 +123,8 @@ class Plane2DEnvironment{
         og::PathGeometric &p = ss_->getSolutionPath();
         p.interpolate();
         for (std::size_t i = 0 ; i < p.getStateCount() ; ++i){
-            const int w = std::min(maxWidth_, (int)p.getState(i)->as<ob::RealVectorStateSpace::StateType>()->values[0]);
-            const int h = std::min(maxHeight_, (int)p.getState(i)->as<ob::RealVectorStateSpace::StateType>()->values[1]);
+            const int w = std::min(maxWidth_, (int)p.getState(i)->as<ob::SE2StateSpace::StateType>()->getX());
+            const int h = std::min(maxHeight_, (int)p.getState(i)->as<ob::SE2StateSpace::StateType>()->getY());
             ompl::PPM::Color &c = ppm_.getPixel(h, w);
             c.red = 255;
             c.green = 0;
@@ -127,11 +141,25 @@ class Plane2DEnvironment{
     } //end of save
 
 
+	void getOrders(){
+		og::PathGeometric &p = ss_->getSolutionPath();
+
+		//Accessing each waypoint on the path
+		std::vector< ob::State * >& waypoints = p.getStates();
+		for(int i=0; i<waypoints.size(); i++){
+			ob::State* state=waypoints[i];
+	        const double X = (double)state->as<ob::SE2StateSpace::StateType>()->getX();
+            const double Y = (double)state->as<ob::SE2StateSpace::StateType>()->getY();
+			std::cout<<"X="<<X<<" ; Y="<<Y<<std::endl;
+		}		
+	}	
+
+
     private:
     
     bool isStateValid(const ob::State *state) const {
-        const int w = std::min((int)state->as<ob::RealVectorStateSpace::StateType>()->values[0], maxWidth_);
-        const int h = std::min((int)state->as<ob::RealVectorStateSpace::StateType>()->values[1], maxHeight_);
+        const int w = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getX(), maxWidth_);
+        const int h = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getY(), maxHeight_);
 
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
         return c.red > 127 && c.green > 127 && c.blue > 127;
@@ -142,18 +170,7 @@ class Plane2DEnvironment{
     int maxHeight_;
     ompl::PPM ppm_;
     
-	void getOrders(){
-		og::PathGeometric &p = ss_->getSolutionPath();
 
-		//Accessing each waypoint on the path
-		std::vector< ob::State * >& waypoints = p.getStates();
-		for(int i=0; i<waypoints.size(); i++){
-			ob::State* state=waypoints[i];
-	        const double X = (double)state->as<ob::RealVectorStateSpace::StateType>()->values[0];
-            const double Y = (double)state->as<ob::RealVectorStateSpace::StateType>()->values[1];
-			std::cout<<"X="<<X<<" ; Y="<<Y<<std::endl;
-		}		
-	}	
 
 
 
@@ -167,7 +184,7 @@ int main(int, char **){
 //    Plane2DEnvironment env((path / "ppm/floor.ppm").string().c_str());
     Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/toConvert.ppm");
     if (env.plan(15, 15, 78, 57)){
-		env.getOrders();
+//		env.getOrders();
         env.recordSolution();
         env.save("reduce_vertices.ppm");
     }
