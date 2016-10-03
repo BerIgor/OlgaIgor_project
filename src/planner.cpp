@@ -130,7 +130,12 @@ class Plane2DEnvironment{
         ppm_.saveFile(filename);
     } //end of save
 
-
+	/*
+	 * Written by Igor Berendorf
+	 * updateYaws
+	 * Function will update the resulting yaws from the solution path
+	 * and add them to the solution path as the 3rd dimension
+	 */
 	void calcYaws(){
 		og::PathGeometric &p = ss_->getSolutionPath();
 		//TODO: check to see that an actual solution has been found
@@ -140,35 +145,50 @@ class Plane2DEnvironment{
 		double previous_X=, previous_Y;
 		//Accessing each waypoint on the path
 		std::vector< ob::State * >& waypoints = p.getStates();
-		for(int i=0; i<waypoints.size(); i++){
+		/* This solution is not optimal. There are {(#ofWaypoints-1) * 4} casts.
+		 * A better solution would be to use variables to represent the previous state
+		 */
+		for(int i=0; i<waypoints.size()-1; i++){
 
-			ob::State* state=waypoints[i];
-	        const double X = (double)state->as<ob::RealVectorStateSpace::StateType>()->values[0];
-            const double Y = (double)state->as<ob::RealVectorStateSpace::StateType>()->values[1];
+			ob::State* current_state=waypoints[i];
+			ob::State* next_state=waypoints[i+1];
+	        const double X = (double)current_state->as<ob::RealVectorStateSpace::StateType>()->values[0];
+            const double Y = (double)current_state->as<ob::RealVectorStateSpace::StateType>()->values[1];
+	        const double next_X = (double)next_state->as<ob::RealVectorStateSpace::StateType>()->values[0];
+            const double next_Y = (double)next_state->as<ob::RealVectorStateSpace::StateType>()->values[1];
+
+			//unsigned double hypotenuse = sqrt(pow(X_diff, 2), pow(Y_diff, 2));
 
 			//depends on the quadrant
-			unsigned int rel_quadrant=getRelativeQuadrant(double x_ref, double y_ref, double x_tar, double y_tar);
-			//Adding yaw calculation
-			if(i==0){
-				previous			
-				continue;
-			}
+			unsigned int rel_quadrant=getRelativeQuadrant(X, Y, next_X, next_Y);
+
+			double Y_diff = abs(next_Y - Y);
+			double X_diff = abs(next_X - X);
+
+			double angle = atan2(Y_diff, X_diff) * 180/PI;
 			
-			double Y_diff = Y - previous_Y;
-			double X_diff = X - previous_X;
-			yaw = atan2(Y_diff, X_diff) * 180/PI;
+			switch (quadrant){
+				case 1:
+					yaw = angle;
+					break;
+				case 2:
+					yaw = 180 - angle;
+					break;
+				case 3:
+					yaw = 180 + angle;
+					break;
+				case 4:
+					yaw = 360 - angle;
+					break;								
+				default:
+					std::cout<<"ERROR"<<std::endl;				
+			}//end of switch case
 
-			previous_Y = Y;
-			previous_X = X;			
-
+			//Update the state which will have this resulting yaw
 			
-
-
-		}
-
-
+		}//end of for
 		return;
-	}
+	}//end of calcYaws
 
 	//TODO: finish this to include yaw
 	void printOrders(){
