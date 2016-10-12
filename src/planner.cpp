@@ -22,8 +22,13 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 
 
 
+
+
+
+
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
+
 
 
 class Plane2DEnvironment{
@@ -104,10 +109,10 @@ class Plane2DEnvironment{
 			//TODO: add path shortening
 
             //Printing the solution
-			std::cout << "Solution in base form" << std::endl;
-            p.print(std::cout);
-            std::cout << "Solution in matrix form" << std::endl;
-            p.printAsMatrix(std::cout);
+			//std::cout << "Solution in base form" << std::endl;
+            //p.print(std::cout);
+            //std::cout << "Solution in matrix form" << std::endl;
+            //p.printAsMatrix(std::cout);
 
 
             return true;
@@ -141,18 +146,50 @@ class Plane2DEnvironment{
     } //end of save
 
 
+	/*
+	 * Written by Igor Berendorf
+	 * getOrders will print to stdout the orders for the robot
+	 * TODO: Write to accomodate varying initial yaw.
+	 *
+	 */
 	void getOrders(){
 		og::PathGeometric &p = ss_->getSolutionPath();
 
 		updateYaws();
 
+		//TODO: fix. assuming initial orientation is 0
+		double previous_yaw=0;
+		double yaw;
+
+
 		//Accessing each waypoint on the path
 		std::vector< ob::State * >& waypoints = p.getStates();
-		for(int i=0; i<waypoints.size(); i++){
+		for(int i=0; i<waypoints.size()-1; i++){
 			ob::State* state=waypoints[i];
+			ob::State* next_state=waypoints[i+1];
 	        const double X = (double)state->as<ob::SE2StateSpace::StateType>()->getX();
             const double Y = (double)state->as<ob::SE2StateSpace::StateType>()->getY();
-			std::cout<<"X="<<X<<" ; Y="<<Y<<std::endl;
+	        const double next_X = (double)next_state->as<ob::SE2StateSpace::StateType>()->getX();
+	        const double next_Y = (double)next_state->as<ob::SE2StateSpace::StateType>()->getY();
+			yaw=yawsVector[i];
+
+			//std::cout<<"X="<<X<<" ; Y="<<Y<<std::endl;
+
+			//get turn
+			double turn = 360-previous_yaw+yaw;
+			if (turn>180) {
+				turn = turn -360;
+			}
+
+			
+
+			//get distance
+			double distance = sqrt( pow(abs(next_X - X), 2) + pow(abs(next_Y - Y), 2) );
+			
+
+			std::cout<<"turn "<< turn <<std::endl;
+			std::cout<<"drive "<< distance <<std::endl;
+			previous_yaw=yaw;
 		}		
 	}
 
@@ -162,10 +199,15 @@ class Plane2DEnvironment{
 	 * updateYaws
 	 * Function will update the resulting yaws from the solution path
 	 * and add them to the solution path as the 3rd dimension
+	 * NOTE: These yaws are the angle (0-360) at which to travel
 	 */
 	void updateYaws(){
+
+		if (!ss_->haveSolutionPath()){
+			//no solution
+			return;
+		}
 		og::PathGeometric &p = ss_->getSolutionPath();
-		//TODO: check to see that an actual solution has been found
 
 		//Accessing each waypoint on the path
 		std::vector< ob::State * >& waypoints = p.getStates();
@@ -183,8 +225,6 @@ class Plane2DEnvironment{
 	        const double next_X = (double)next_state->as<ob::SE2StateSpace::StateType>()->getX();
             const double next_Y = (double)next_state->as<ob::SE2StateSpace::StateType>()->getY();
 
-			//unsigned double hypotenuse = sqrt(pow(X_diff, 2), pow(Y_diff, 2));
-
 			//depends on the quadrant
 			unsigned int rel_quadrant=getRelativeQuadrant(X, Y, next_X, next_Y);
 
@@ -195,24 +235,25 @@ class Plane2DEnvironment{
 				
 			double yaw=0;
 			switch (rel_quadrant){
-				case 0:
+				case 1:
 					yaw = angle;
 					break;
-				case 1:
+				case 2:
 					yaw = 180 - angle;
 					break;
-				case 2:
+				case 3:
 					yaw = 180 + angle;
 					break;
-				case 3:
+				case 4:
 					yaw = 360 - angle;
 					break;								
 				default:
 					std::cout<<"ERROR"<<std::endl;				
 			}//end of switch case
+		//std::cout<<"yaw = "<<yaw<<std::endl;
 
-			//Update the state which will have this resulting yaw
-			//next_state->as<ob::SE2StateSpace::StateType>()->setYaw(yaw);
+		//update the yawVecotr		
+		yawsVector.push_back(yaw);
 
 		}//end of for
 		return;
@@ -229,10 +270,13 @@ class Plane2DEnvironment{
         return c.red > 127 && c.green > 127 && c.blue > 127;
     } //end of isStateValid
  
+
+	//TODO: see what happens if target and reference are at the same coordinate
 	/*
 	* Written by Igor Berendorf
 	* getRelativeQuadrant
-	* NOTE: This function works with the messed up coordinate system ompl has in place
+	* NOTE: This function works with ompl's basic coordinate system (inverted y axis)
+	* 		but will return the relative quadrant in regular coordinates
 	* Parameters are X,Y of Origin, followed by X,Y of target coordinate
 	* Returns the relative quadrant of Target to Origin (1 to 4)
 	*/
@@ -244,18 +288,20 @@ class Plane2DEnvironment{
 			quadrants[0] = quadrants[3] = 0;
 		}
 		//NOTE: Due to the Y axis being vertically flipped, the condition here is different
-		if( y_tar < y_ref ){
+		if( y_tar > y_ref ){
 			quadrants[0] = quadrants[1] = 0;
 		} else {
 			quadrants[2] = quadrants[3] = 0;
 		}
 		int i;
 		for(i=0; i<4; i++){
-			if (quadrants[i] == 0)
-				continue;
+			if (quadrants[i] != 0) {
+				break;
+			}
 		}
+		//std::cout<<"rel quadrant = "<< quadrants[i] << std::endl;
 		return quadrants[i];
-	}
+	}//end of getRelativeQuadrant
 
 
 
@@ -263,7 +309,8 @@ class Plane2DEnvironment{
     int maxWidth_;
     int maxHeight_;
     ompl::PPM ppm_;
-    
+	//TODO: find a solution which doesn't need explicit yaw calculation
+	std::vector<double> yawsVector;
 
 
 
@@ -277,7 +324,8 @@ int main(int, char **){
     //boost::filesystem::path path(TEST_RESOURCES_DIR);
 //    Plane2DEnvironment env((path / "ppm/floor.ppm").string().c_str());
     Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/toConvert.ppm");
-    if (env.plan(15, 15, 78, 57)){
+    //if (env.plan(15, 15, 78, 57)){
+	if (env.plan(78, 57, 15, 15)){
 		env.getOrders();
         env.recordSolution();
         env.save("reduce_vertices.ppm");
