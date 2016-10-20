@@ -7,6 +7,7 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/geometric/SimpleSetup.h>
+#include <ompl/geometric/planners/prm/PRMstar.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/util/PPM.h>
@@ -20,8 +21,11 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 #include <iostream>
 #include <math.h>
 
+#include <random>
 
-
+#define MAX_COLOR 254
+#define MIN_COLOR 0
+//#define GREY 205
 
 
 
@@ -42,33 +46,30 @@ class Plane2DEnvironment{
             OMPL_ERROR("Unable to load %s.\n%s", ppm_file, ex.what());
         }
         
-        //TODO: fucking change this giant if around        
-        if(ok) {
-			ob::SE2StateSpace *space = new ob::SE2StateSpace();
+		if(!ok){
+			return;
+		}
 
-//define bounds
-			ob::RealVectorBounds bounds(2);
-			bounds.setLow(0, 0);
-			bounds.setHigh(0, ppm_.getWidth());
+		ob::SE2StateSpace *space = new ob::SE2StateSpace();
 
-			bounds.setLow(1, 0);
-			bounds.setHigh(1, ppm_.getHeight());
+		//define bounds
+		ob::RealVectorBounds bounds(2);
+		bounds.setLow(0, 0);
+		bounds.setHigh(0, ppm_.getWidth());
+		bounds.setLow(1, 0);
+		bounds.setHigh(1, ppm_.getHeight());
+		space->setBounds(bounds);			
 
-			//bounds.setLow(2, 0);
-			//bounds.setHigh(2, 360);
-			space->setBounds(bounds);			
-
-
-            maxWidth_ = ppm_.getWidth() - 1;
-            maxHeight_ = ppm_.getHeight() - 1;
-            ss_.reset(new og::SimpleSetup(ob::StateSpacePtr(space)));
-            // set state validity checking for this space
-            ss_->setStateValidityChecker(std::bind(&Plane2DEnvironment::isStateValid, this, std::placeholders::_1));
-            space->setup();
-            ss_->getSpaceInformation()->setStateValidityCheckingResolution(1.0 / space->getMaximumExtent());
-            //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
-        }
-    }   //end constructor
+        maxWidth_ = ppm_.getWidth() - 1;
+        maxHeight_ = ppm_.getHeight() - 1;
+        ss_.reset(new og::SimpleSetup(ob::StateSpacePtr(space)));
+        //set state validity checking for this space
+        ss_->setStateValidityChecker(std::bind(&Plane2DEnvironment::isStateValid, this, std::placeholders::_1));
+        space->setup();
+        ss_->getSpaceInformation()->setStateValidityCheckingResolution(1.0 / space->getMaximumExtent());
+        //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
+		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
+    }//end of constructor
 
     bool plan(unsigned int start_row, unsigned int start_col, unsigned int goal_row, unsigned int goal_col){
         if (!ss_){
@@ -103,18 +104,9 @@ class Plane2DEnvironment{
         if (ss_->haveSolutionPath()){
 			//Simplifying solution
             og::PathGeometric &p = ss_->getSolutionPath();
-            og::PathSimplifierPtr& pathSimplifier = ss_->getPathSimplifier();//->simplifyMax(p);
-            pathSimplifier->reduceVertices(p, 0, 0, 1);
-
-			//TODO: add path shortening
-
-            //Printing the solution
-			//std::cout << "Solution in base form" << std::endl;
-            //p.print(std::cout);
-            //std::cout << "Solution in matrix form" << std::endl;
-            //p.printAsMatrix(std::cout);
-
-
+            og::PathSimplifierPtr& pathSimplifier = ss_->getPathSimplifier();
+//            pathSimplifier->reduceVertices(p, 0, 0, 1);
+			pathSimplifier->collapseCloseVertices(p, 100, 0);
             return true;
         } else {
             return false;
@@ -146,17 +138,14 @@ class Plane2DEnvironment{
     } //end of save
 
 
+	//TODO: Write to accomodate varying initial yaw.
 	/*
 	 * Written by Igor Berendorf
 	 * getOrders will print to stdout the orders for the robot
-	 * TODO: Write to accomodate varying initial yaw.
-	 *
 	 */
 	void getOrders(){
 		og::PathGeometric &p = ss_->getSolutionPath();
-
 		updateYaws();
-
 		//TODO: fix. assuming initial orientation is 0
 		double previous_yaw=0;
 		double yaw;
@@ -173,20 +162,15 @@ class Plane2DEnvironment{
 	        const double next_Y = (double)next_state->as<ob::SE2StateSpace::StateType>()->getY();
 			yaw=yawsVector[i];
 
-			//std::cout<<"X="<<X<<" ; Y="<<Y<<std::endl;
-
-			//get turn
+			//get the turn
 			double turn = 360-previous_yaw+yaw;
 			if (turn>180) {
 				turn = turn -360;
 			}
 
-			
-
 			//get distance
 			double distance = sqrt( pow(abs(next_X - X), 2) + pow(abs(next_Y - Y), 2) );
 			
-
 			std::cout<<"turn "<< turn <<std::endl;
 			std::cout<<"drive "<< distance <<std::endl;
 			previous_yaw=yaw;
@@ -203,8 +187,7 @@ class Plane2DEnvironment{
 	 */
 	void updateYaws(){
 
-		if (!ss_->haveSolutionPath()){
-			//no solution
+		if (!ss_->haveSolutionPath()){ //no solution
 			return;
 		}
 		og::PathGeometric &p = ss_->getSolutionPath();
@@ -212,10 +195,8 @@ class Plane2DEnvironment{
 		//Accessing each waypoint on the path
 		std::vector< ob::State * >& waypoints = p.getStates();
 
-		/* 
-		 * This solution is not optimal. It uses {(#ofWaypoints-1) * 4} casts.
-		 * A better solution would be to use variables to represent the previous state
-		 */
+		//This solution is not optimal. It uses {(#ofWaypoints-1) * 4} casts.
+		//A better solution would be to use variables to represent the previous state
 		for(int i=0; i<waypoints.size()-1; i++){
 
 			ob::State* current_state=waypoints[i];
@@ -230,7 +211,6 @@ class Plane2DEnvironment{
 
 			double Y_diff = abs(next_Y - Y);
 			double X_diff = abs(next_X - X);
-
 			double angle = atan2(Y_diff, X_diff) * 180/M_PI;
 				
 			double yaw=0;
@@ -249,12 +229,8 @@ class Plane2DEnvironment{
 					break;								
 				default:
 					std::cout<<"ERROR"<<std::endl;				
-			}//end of switch case
-		//std::cout<<"yaw = "<<yaw<<std::endl;
-
-		//update the yawVecotr		
-		yawsVector.push_back(yaw);
-
+			}//end of switch case		
+			yawsVector.push_back(yaw); //update the yawVecotr
 		}//end of for
 		return;
 	}//end of calcYaws
@@ -265,8 +241,9 @@ class Plane2DEnvironment{
     bool isStateValid(const ob::State *state) const {
         const int w = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getX(), maxWidth_);
         const int h = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getY(), maxHeight_);
-
+		
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
+		
         return c.red > 127 && c.green > 127 && c.blue > 127;
     } //end of isStateValid
  
@@ -294,27 +271,23 @@ class Plane2DEnvironment{
 			quadrants[2] = quadrants[3] = 0;
 		}
 		int i;
-		for(i=0; i<4; i++){
+		for(i=0; i<4; i++){	//find the only quadrant not set to 0
 			if (quadrants[i] != 0) {
 				break;
 			}
 		}
-		//std::cout<<"rel quadrant = "<< quadrants[i] << std::endl;
 		return quadrants[i];
 	}//end of getRelativeQuadrant
 
 
 
+	//private members
     og::SimpleSetupPtr ss_;
     int maxWidth_;
     int maxHeight_;
     ompl::PPM ppm_;
 	//TODO: find a solution which doesn't need explicit yaw calculation
 	std::vector<double> yawsVector;
-
-
-
-
 
 }; //end of class
     
