@@ -21,8 +21,10 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 #include <iostream>
 #include <math.h>
 
-#include <random>
-
+//added for pixel weight optimization
+#include <ompl/base/OptimizationObjective.h>
+#include <ompl/base/ProblemDefinition.h>
+////////
 #define MAX_COLOR 254
 #define MIN_COLOR 0
 //#define GREY 205
@@ -69,6 +71,8 @@ class Plane2DEnvironment{
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(1.0 / space->getMaximumExtent());
         //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
 		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
+
+
     }//end of constructor
 
     bool plan(unsigned int start_row, unsigned int start_col, unsigned int goal_row, unsigned int goal_col){
