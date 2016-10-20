@@ -72,6 +72,12 @@ class Plane2DEnvironment{
         //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
 		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
 
+		/////optimization
+
+
+		ob::OptimizationObjectivePtr oo = ss_->getOptimizationObjective();
+
+
 
     }//end of constructor
 
