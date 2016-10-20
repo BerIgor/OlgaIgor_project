@@ -300,9 +300,9 @@ int main(int, char **){
 
     //boost::filesystem::path path(TEST_RESOURCES_DIR);
 //    Plane2DEnvironment env((path / "ppm/floor.ppm").string().c_str());
-    Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/toConvert.ppm");
+    Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/big-map.ppm");
     //if (env.plan(15, 15, 78, 57)){
-	if (env.plan(78, 57, 15, 15)){
+	if (env.plan(43, 537, 664, 157)){
 		env.getOrders();
         env.recordSolution();
         env.save("reduce_vertices.ppm");
