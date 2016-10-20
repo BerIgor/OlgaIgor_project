@@ -24,6 +24,7 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 //added for pixel weight optimization
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/ProblemDefinition.h>
+#include <functional>
 ////////
 #define MAX_COLOR 254
 #define MIN_COLOR 0
@@ -35,7 +36,9 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
-
+ob::Cost myCTG(const ob::State* a, const ob::Goal* b){
+	return ob::Cost(80.0);
+}
 
 class Plane2DEnvironment{
     public:
@@ -52,8 +55,7 @@ class Plane2DEnvironment{
 			return;
 		}
 
-		ob::SE2StateSpace *space = new ob::SE2StateSpace();
-
+		
 		//define bounds
 		ob::RealVectorBounds bounds(2);
 		bounds.setLow(0, 0);
@@ -64,20 +66,30 @@ class Plane2DEnvironment{
 
         maxWidth_ = ppm_.getWidth() - 1;
         maxHeight_ = ppm_.getHeight() - 1;
+
+
+		ob::StateSpacePtr space(new ob::SE2StateSpace());
+
+
+
+
+
+
+
         ss_.reset(new og::SimpleSetup(ob::StateSpacePtr(space)));
+
+		space->setup();
+		/////optimization
+		ob::CostToGoHeuristic ctgh = myCTG;
+		ob::OptimizationObjectivePtr optimizationObjective = ss_->getOptimizationObjective()->setCostToGoHeuristic(ctgh);
+
+
+		//all below was above optimization
         //set state validity checking for this space
         ss_->setStateValidityChecker(std::bind(&Plane2DEnvironment::isStateValid, this, std::placeholders::_1));
-        space->setup();
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(1.0 / space->getMaximumExtent());
         //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
 		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
-
-		/////optimization
-
-
-		ob::OptimizationObjectivePtr oo = ss_->getOptimizationObjective();
-
-
 
     }//end of constructor
 
