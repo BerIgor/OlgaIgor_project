@@ -36,11 +36,15 @@ namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
 class WeightObjective : public ob::OptimizationObjective {
+private:
+	ompl::PPM ppm_;
+
 public:
 
-	WeightObjective(const ob::SpaceInformationPtr& si) : ob::OptimizationObjective(si) {
+	WeightObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm) : ob::OptimizationObjective(si) {
 	description_="rgb based state weight";
 	//missing 
+	ppm_=ppm;
 	}
 
 	//The following method is super important. You can clearly see difference in paths when changing this function.
