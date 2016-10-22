@@ -35,6 +35,44 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
+class WeightObjective : public ob::OptimizationObjective {
+public:
+
+	WeightObjective(const ob::SpaceInformationPtr& si) : ob::OptimizationObjective(si) {
+	description_="rgb based state weight";
+	//missing 
+	}
+
+	//The following method is super important. You can clearly see difference in paths when changing this function.
+	//TODO: find a way to use the default distance thing
+	ob::Cost motionCost(const ob::State* s1, const ob::State* s2) const {
+		//return ob::OptimizationObjective::motionCost(s1,s2);
+		//TODO: the following procedure is done in another function. combine to avoid code copying
+        const double X = (double)s1->as<ob::SE2StateSpace::StateType>()->getX();
+        const double Y = (double)s1->as<ob::SE2StateSpace::StateType>()->getY();
+        const double next_X = (double)s2->as<ob::SE2StateSpace::StateType>()->getX();
+        const double next_Y = (double)s2->as<ob::SE2StateSpace::StateType>()->getY();
+		double distance = sqrt( pow(abs(next_X - X), 2) + pow(abs(next_Y - Y), 2) );
+		return ob::Cost(distance);
+	}
+
+	ob::Cost stateCost(const ob::State* state) const {
+//		return identityCost();//from other example
+		/*
+        const int w = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getX(), maxWidth_);
+        const int h = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getY(), maxHeight_);
+        const ompl::PPM::Color &c = ppm_.getPixel(h, w);
+		
+        return c.red > 127 && c.green > 127 && c.blue > 127;
+*/
+		return ob::Cost(80.0);//what i want
+	}
+
+	//ob::Cost identityCost() const {
+	//	return ob::Cost(80.0);
+	//}
+	
+};
 
 
 class Plane2DEnvironment{
@@ -71,7 +109,7 @@ class Plane2DEnvironment{
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(1.0 / space->getMaximumExtent());
         //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
 		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
-
+		ss_->setOptimizationObjective(ob::OptimizationObjectivePtr(new WeightObjective(ss_->getSpaceInformation())));
 
     }//end of constructor
 
