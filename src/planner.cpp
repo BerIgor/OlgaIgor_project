@@ -51,6 +51,7 @@ public:
 	//TODO: find a way to use the default distance thing
 	ob::Cost motionCost(const ob::State* s1, const ob::State* s2) const {
 		//return ob::OptimizationObjective::motionCost(s1,s2);
+/*
 		//TODO: the following procedure is done in another function. combine to avoid code copying
         const double X = (double)s1->as<ob::SE2StateSpace::StateType>()->getX();
         const double Y = (double)s1->as<ob::SE2StateSpace::StateType>()->getY();
@@ -58,23 +59,25 @@ public:
         const double next_Y = (double)s2->as<ob::SE2StateSpace::StateType>()->getY();
 		double distance = sqrt( pow(abs(next_X - X), 2) + pow(abs(next_Y - Y), 2) );
 		return ob::Cost(distance);
+*/
+		//TODO:Using the following to give weight more value
+		return ob::Cost(0.0);
 	}
 
+	/*
+	When using just pixel color weight (namely red), it would pick to go through the darkest shade
+	*/
 	ob::Cost stateCost(const ob::State* state) const {
-//		return identityCost();//from other example
-		/*
-        const int w = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getX(), maxWidth_);
-        const int h = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getY(), maxHeight_);
+
+        const int w = (int)state->as<ob::SE2StateSpace::StateType>()->getX();
+        const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
 		
-        return c.red > 127 && c.green > 127 && c.blue > 127;
-*/
-		return ob::Cost(80.0);//what i want
+		//TODO: add check that all colors are equal
+		double weight = 255.0-c.red;
+		
+		return ob::Cost(weight);
 	}
-
-	//ob::Cost identityCost() const {
-	//	return ob::Cost(80.0);
-	//}
 	
 };
 
@@ -113,7 +116,7 @@ class Plane2DEnvironment{
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(1.0 / space->getMaximumExtent());
         //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
 		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
-		ss_->setOptimizationObjective(ob::OptimizationObjectivePtr(new WeightObjective(ss_->getSpaceInformation())));
+		ss_->setOptimizationObjective(ob::OptimizationObjectivePtr(new WeightObjective(ss_->getSpaceInformation(), ppm_)));
 
     }//end of constructor
 
@@ -344,7 +347,7 @@ int main(int, char **){
 //    Plane2DEnvironment env((path / "ppm/floor.ppm").string().c_str());
     Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/big-map.ppm");
     //if (env.plan(15, 15, 78, 57)){
-	if (env.plan(43, 537, 664, 157)){
+	if (env.plan(607, 403, 162, 75)){
 		env.getOrders();
         env.recordSolution();
         env.save("reduce_vertices.ppm");
