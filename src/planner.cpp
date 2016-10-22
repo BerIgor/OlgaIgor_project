@@ -36,9 +36,30 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
-ob::Cost myCTG(const ob::State* a, const ob::Goal* b){
-	return ob::Cost(80.0);
-}
+
+class WeightObjective : public ob::OptimizationObjective {
+public:
+
+	WeightObjective(const ob::SpaceInformationPtr& si) : ob::OptimizationObjective(si) {
+	description_="rgb based state weight";
+	//missing 
+	}
+
+	ob::Cost motionCost(const ob::State* s1, const ob::State* s2) const {
+		//return ob::OptimizationObjective::motionCost(s1,s2);
+		return ob::Cost(80.0);
+	}
+
+	ob::Cost stateCost(const ob::State* state) const {
+		return identityCost();//from other example
+		return ob::Cost(80.0);//what i want
+	}
+
+	ob::Cost identityCost() const {
+		return ob::Cost(80.0);
+	}
+	
+};
 
 class Plane2DEnvironment{
     public:
@@ -56,40 +77,47 @@ class Plane2DEnvironment{
 		}
 
 		
+		ob::StateSpacePtr space(new ob::SE2StateSpace());
 		//define bounds
 		ob::RealVectorBounds bounds(2);
 		bounds.setLow(0, 0);
 		bounds.setHigh(0, ppm_.getWidth());
 		bounds.setLow(1, 0);
 		bounds.setHigh(1, ppm_.getHeight());
-		space->setBounds(bounds);			
+		space->as<ob::SE2StateSpace>()->setBounds(bounds);			
 
         maxWidth_ = ppm_.getWidth() - 1;
         maxHeight_ = ppm_.getHeight() - 1;
 
 
-		ob::StateSpacePtr space(new ob::SE2StateSpace());
+		
+		space->as<ob::SE2StateSpace>()->setBounds(bounds);
+		
+		ob::SpaceInformationPtr si(new ob::SpaceInformation(space));
+		si->setStateValidityChecker(std::bind(&Plane2DEnvironment::isStateValid, this, std::placeholders::_1));
+		si->setup();
+		
+		//in the optimization tutorial, the start and goal states are set here
+
+//		ob::ProblemDefinition hpdef(si);
+//		ob::ProblemDefinitionPtr pdef(hpdef);
+		ob::ProblemDefinitionPtr pdef(new ob::ProblemDefinition(si));
 
 
+		//again- start and goal states
+		ob::OptimizationObjectivePtr oo(new WeightObjective(si));
 
-
-
-
-
-        ss_.reset(new og::SimpleSetup(ob::StateSpacePtr(space)));
-
-		space->setup();
-		/////optimization
-		ob::CostToGoHeuristic ctgh = myCTG;
-		ob::OptimizationObjectivePtr optimizationObjective = ss_->getOptimizationObjective()->setCostToGoHeuristic(ctgh);
+		pdef->setOptimizationObjective(oo);
 
 
 		//all below was above optimization
-        //set state validity checking for this space
-        ss_->setStateValidityChecker(std::bind(&Plane2DEnvironment::isStateValid, this, std::placeholders::_1));
-        ss_->getSpaceInformation()->setStateValidityCheckingResolution(1.0 / space->getMaximumExtent());
+       	//ss_->getSpaceInformation()->setStateValidityCheckingResolution(1.0 / space->getMaximumExtent());
         //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
-		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
+		//ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
+//		ob::PlannerPtr planner(new ob::PRMstar(si));
+		ob::PlannerPtr planner = std::make_shared<og::PRMstar>(si);
+		planner->setProblemDefinition(pdef);
+		planner->setup();
 
     }//end of constructor
 
