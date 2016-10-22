@@ -118,13 +118,16 @@ class Plane2DEnvironment{
 		ob::PlannerPtr planner = std::make_shared<og::PRMstar>(si);
 		planner->setProblemDefinition(pdef);
 		planner->setup();
-
+		si_=si;
+		pdef_=pdef;
+		planner_=planner;
     }//end of constructor
 
     bool plan(unsigned int start_row, unsigned int start_col, unsigned int goal_row, unsigned int goal_col){
-        if (!ss_){
-            return false;
-        }
+		//we no longer use ss
+//        if (!ss_){
+//            return false;
+//        }
         ob::ScopedState<> start(ss_->getStateSpace());
         start[0] = start_row;
         start[1] = start_col;
@@ -135,11 +138,11 @@ class Plane2DEnvironment{
 		goal[2] = 0;
         ss_->setStartAndGoalStates(start, goal);
         
-        if (ss_->getPlanner()){
-            ss_->getPlanner()->clear();
-        }
-        ss_->solve();  
-        
+        //if (ss_->getPlanner()){
+        //   ss_->getPlanner()->clear();
+        //}
+        //ss_->solve();  
+        ob::PlannerStatus solved = planner_->solve();
         // generate a few solutions; all will be added to the goal;
         /*
         for (int i = 0 ; i < 10 ; ++i){
@@ -333,6 +336,9 @@ class Plane2DEnvironment{
 
 	//private members
     og::SimpleSetupPtr ss_;
+	ob::SpaceInformationPtr si_;
+	ob::ProblemDefinition pdef_;
+	ob::PlannerPtr planner_;
     int maxWidth_;
     int maxHeight_;
     ompl::PPM ppm_;
@@ -349,6 +355,7 @@ int main(int, char **){
     Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/toConvert.ppm");
     //if (env.plan(15, 15, 78, 57)){
 	if (env.plan(78, 57, 15, 15)){
+printf("hello");
 		env.getOrders();
         env.recordSolution();
         env.save("reduce_vertices.ppm");
