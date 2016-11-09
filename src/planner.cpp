@@ -74,7 +74,7 @@ public:
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
 		
 		//TODO: add check that all colors are equal
-		double weight = 255.0-c.red;
+		double weight = c.red;
 		
 		return ob::Cost(weight);
 	}
@@ -292,6 +292,9 @@ class Plane2DEnvironment{
         const int h = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getY(), maxHeight_);
 		
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
+
+		//calculate clearance, make sure it meets size of robot
+
 		
         return c.red > 127 && c.green > 127 && c.blue > 127;
     } //end of isStateValid
