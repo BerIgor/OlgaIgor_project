@@ -20,6 +20,7 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 #include <boost/filesystem.hpp>
 #include <iostream>
 #include <math.h>
+#include <ompl/base/StateValidityChecker.h>
 
 //added for pixel weight optimization
 #include <ompl/base/OptimizationObjective.h>
@@ -39,12 +40,13 @@ class WeightObjective : public ob::OptimizationObjective {
 private:
 	ompl::PPM ppm_;
 
+
 public:
 
 	WeightObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm) : ob::OptimizationObjective(si) {
-	description_="rgb based state weight";
-	//missing 
-	ppm_=ppm;
+		description_="rgb based state weight";
+		//missing 
+		ppm_=ppm;
 	}
 
 	//The following method is super important. You can clearly see difference in paths when changing this function.
@@ -82,8 +84,40 @@ public:
 };
 
 
+
+class MyStateValidityChecker : public ob::StateValidityChecker {
+	private:
+	ompl::PPM ppm_;
+
+	public:
+	//c'tor
+	MyStateValidityChecker(ompl::PPM ppm, const ob::SpaceInformationPtr &si) :
+			 ob::StateValidityChecker(si) {
+		ppm_=ppm;	
+	}
+
+	virtual bool isValid(const ob::State* state) const {
+	    const int w = (int)state->as<ob::SE2StateSpace::StateType>()->getX();
+	    const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
+	
+	    const ompl::PPM::Color &c = ppm_.getPixel(h, w);
+
+		return c.red > 127 && c.green > 127 && c.blue > 127;
+	}
+
+};
+
+
+
+
 class Plane2DEnvironment{
+	private:
+		ompl::PPM ppm_;
+
     public:
+
+
+
     Plane2DEnvironment(const char* ppm_file){
         bool ok=false;
         try {   //opening the file
@@ -111,7 +145,12 @@ class Plane2DEnvironment{
         maxHeight_ = ppm_.getHeight() - 1;
         ss_.reset(new og::SimpleSetup(ob::StateSpacePtr(space)));
         //set state validity checking for this space
-        ss_->setStateValidityChecker(std::bind(&Plane2DEnvironment::isStateValid, this, std::placeholders::_1));
+        //ss_->setStateValidityChecker(std::bind(&Plane2DEnvironment::isStateValid, this, std::placeholders::_1));
+
+		//create object for state validity checking
+		ss_->setStateValidityChecker(ob::StateValidityCheckerPtr(new MyStateValidityChecker(ppm_, ss_->getSpaceInformation())));
+
+
         space->setup();
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(1.0 / space->getMaximumExtent());
         //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
@@ -294,7 +333,6 @@ class Plane2DEnvironment{
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
 
 		//calculate clearance, make sure it meets size of robot
-
 		
         return c.red > 127 && c.green > 127 && c.blue > 127;
     } //end of isStateValid
@@ -337,7 +375,7 @@ class Plane2DEnvironment{
     og::SimpleSetupPtr ss_;
     int maxWidth_;
     int maxHeight_;
-    ompl::PPM ppm_;
+//    ompl::PPM ppm_;
 	//TODO: find a solution which doesn't need explicit yaw calculation
 	std::vector<double> yawsVector;
 
