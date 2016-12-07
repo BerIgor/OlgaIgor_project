@@ -323,6 +323,16 @@ class Plane2DEnvironment{
 		return;
 	}//end of calcYaws
 
+	void getClearances(){
+		og::PathGeometric &p = ss_->getSolutionPath();
+		std::vector< ob::State * >& waypoints = p.getStates();
+		for(int i=0; i<waypoints.size()-1; i++){
+			ob::State* state=waypoints[i];
+			double c = ss_->getStateValidityChecker()->clearance(state);
+			std::cout<< c <<std::endl;
+		}
+		return;
+	}
 
     private:
     
@@ -392,6 +402,7 @@ int main(int, char **){
 		env.getOrders();
         env.recordSolution();
         env.save("reduce_vertices.ppm");
+		env.getClearances();
     }
     return 0;
 }
