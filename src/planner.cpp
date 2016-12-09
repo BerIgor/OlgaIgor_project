@@ -336,7 +336,7 @@ class Plane2DEnvironment{
 
     private:
     
-    bool isStateValid(const ob::State *state) const {
+    bool old_isStateValid(const ob::State *state) const {
         const int w = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getX(), maxWidth_);
         const int h = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getY(), maxHeight_);
 		
