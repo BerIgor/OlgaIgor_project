@@ -46,6 +46,14 @@ HOW TO USE:
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
+
+
+
+
+
+
+
+
 class WeightObjective : public ob::OptimizationObjective {
 private:
 	ompl::PPM ppm_;
@@ -63,7 +71,6 @@ public:
 	//TODO: find a way to use the default distance thing
 	ob::Cost motionCost(const ob::State* s1, const ob::State* s2) const {
 		//return ob::OptimizationObjective::motionCost(s1,s2);
-
 		//TODO: the following procedure is done in another function. combine to avoid code copying
         const double X = (double)s1->as<ob::SE2StateSpace::StateType>()->getX();
         const double Y = (double)s1->as<ob::SE2StateSpace::StateType>()->getY();
@@ -80,9 +87,10 @@ public:
 	When using just pixel color weight (namely red), it would pick to go through the darkest shade
 	*/
 	ob::Cost stateCost(const ob::State* state) const {
-
+	exit(1);
         const int w = (int)state->as<ob::SE2StateSpace::StateType>()->getX();
         const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
+		std::cout<< w << ";" << h << std::endl;
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
 		
 		//TODO: add check that all colors are equal
