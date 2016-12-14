@@ -21,6 +21,7 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 #include <iostream>
 #include <math.h>
 #include <ompl/base/StateValidityChecker.h>
+#include <string>
 
 //added for pixel weight optimization
 #include <ompl/base/OptimizationObjective.h>
@@ -134,13 +135,13 @@ class Plane2DEnvironment{
 	private:
 		ompl::PPM ppm_;
 
-		int robotRadius_ = 1;
+		int robotRadius_;
 
     public:
 
 
 
-    Plane2DEnvironment(const char* ppm_file){
+    Plane2DEnvironment(const char* ppm_file, int radius){
         bool ok=false;
         try {   //opening the file
             ppm_.loadFile(ppm_file);
@@ -152,6 +153,8 @@ class Plane2DEnvironment{
 		if(!ok){
 			return;
 		}
+
+		robotRadius_ = radius;
 
 		ob::SE2StateSpace *space = new ob::SE2StateSpace();
 
@@ -414,12 +417,15 @@ class Plane2DEnvironment{
 
 }; //end of class
     
-int main(int, char **){
+int main(int argc, char **argv){
     std::cout << "OMPL version: " << OMPL_VERSION << std::endl;
-
+	char* filename = argv[1];
+	int radius = std::stoi(argv[2]);
+	std::cout<< "file is: " << filename << " ; radius is: " << radius << std::endl;
     //boost::filesystem::path path(TEST_RESOURCES_DIR);
 //    Plane2DEnvironment env((path / "ppm/floor.ppm").string().c_str());
-    Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/big-map.ppm");
+//    Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/big-map.ppm");
+    Plane2DEnvironment env(filename, radius);
     //if (env.plan(15, 15, 78, 57)){
 	if (env.plan(607, 403, 162, 75)){
 		env.getOrders();
