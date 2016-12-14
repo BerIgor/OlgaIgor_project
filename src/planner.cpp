@@ -53,7 +53,7 @@ public:
 	//TODO: find a way to use the default distance thing
 	ob::Cost motionCost(const ob::State* s1, const ob::State* s2) const {
 		//return ob::OptimizationObjective::motionCost(s1,s2);
-/*
+
 		//TODO: the following procedure is done in another function. combine to avoid code copying
         const double X = (double)s1->as<ob::SE2StateSpace::StateType>()->getX();
         const double Y = (double)s1->as<ob::SE2StateSpace::StateType>()->getY();
@@ -61,9 +61,9 @@ public:
         const double next_Y = (double)s2->as<ob::SE2StateSpace::StateType>()->getY();
 		double distance = sqrt( pow(abs(next_X - X), 2) + pow(abs(next_Y - Y), 2) );
 		return ob::Cost(distance);
-*/
+
 		//TODO:Using the following to give weight more value
-		return ob::Cost(0.0);
+//		return ob::Cost(0.0);
 	}
 
 	/*
@@ -88,21 +88,41 @@ public:
 class MyStateValidityChecker : public ob::StateValidityChecker {
 	private:
 	ompl::PPM ppm_;
+	og::SimpleSetupPtr ss_;
+	int robotRadius_;
 
 	public:
 	//c'tor
-	MyStateValidityChecker(ompl::PPM ppm, const ob::SpaceInformationPtr &si) :
+	MyStateValidityChecker(ompl::PPM ppm, const ob::SpaceInformationPtr &si, int robotRadius) :
 			 ob::StateValidityChecker(si) {
+		robotRadius_ = robotRadius;
 		ppm_=ppm;	
 	}
 
+	//For future reference: note that clearance is not implemented in a sensible way by ompl
+
 	virtual bool isValid(const ob::State* state) const {
+
 	    const int w = (int)state->as<ob::SE2StateSpace::StateType>()->getX();
 	    const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
 	
-	    const ompl::PPM::Color &c = ppm_.getPixel(h, w);
-
-		return c.red > 127 && c.green > 127 && c.blue > 127;
+		//for all x
+		for(int x = w - robotRadius_; x <= w + robotRadius_; x++){
+			//for all y
+			for(int y = h - robotRadius_; y <= h + robotRadius_; y++){
+				//get color
+				const ompl::PPM::Color &c = ppm_.getPixel(h, w);
+				//check color
+				if( c.red > 127 && c.green > 127 && c.blue > 127){
+					//if ok continue
+					continue;
+				} else {
+					return false;
+				}
+			}
+		}
+		return true;
+//		return ((c.red > 127 && c.green > 127 && c.blue > 127) && (2 < ss_->getStateValidityChecker()->clearance(state)));
 	}
 
 };
@@ -113,6 +133,8 @@ class MyStateValidityChecker : public ob::StateValidityChecker {
 class Plane2DEnvironment{
 	private:
 		ompl::PPM ppm_;
+
+		int robotRadius_ = 1;
 
     public:
 
@@ -148,11 +170,12 @@ class Plane2DEnvironment{
         //ss_->setStateValidityChecker(std::bind(&Plane2DEnvironment::isStateValid, this, std::placeholders::_1));
 
 		//create object for state validity checking
-		ss_->setStateValidityChecker(ob::StateValidityCheckerPtr(new MyStateValidityChecker(ppm_, ss_->getSpaceInformation())));
+		ss_->setStateValidityChecker(ob::StateValidityCheckerPtr(new MyStateValidityChecker(ppm_, ss_->getSpaceInformation(), robotRadius_)));
 
 
         space->setup();
-        ss_->getSpaceInformation()->setStateValidityCheckingResolution(1.0 / space->getMaximumExtent());
+//ss_->getSpaceInformation()->setStateValidityCheckingResolution(10.0 / space->getMaximumExtent());
+        ss_->getSpaceInformation()->setStateValidityCheckingResolution(0.0001);
         //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
 		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
 		ss_->setOptimizationObjective(ob::OptimizationObjectivePtr(new WeightObjective(ss_->getSpaceInformation(), ppm_)));
@@ -343,8 +366,8 @@ class Plane2DEnvironment{
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
 
 		//calculate clearance, make sure it meets size of robot
-		
-        return c.red > 127 && c.green > 127 && c.blue > 127;
+		//&& (100 < ss_->getStateValidityChecker()->clearance(state))
+        return ((c.red > 127 && c.green > 127 && c.blue > 127) );
     } //end of isStateValid
  
 
@@ -402,7 +425,7 @@ int main(int, char **){
 		env.getOrders();
         env.recordSolution();
         env.save("reduce_vertices.ppm");
-		env.getClearances();
+		//env.getClearances();
     }
     return 0;
 }
