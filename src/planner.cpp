@@ -3,6 +3,15 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 */
 
 
+/*
+
+HOW TO USE:
+
+<.exe> <path to map> <robot radius> <start x> <start y> <end x> <end y>
+
+
+*/
+
 
 
 #include <ompl/base/spaces/RealVectorStateSpace.h>
@@ -92,12 +101,19 @@ class MyStateValidityChecker : public ob::StateValidityChecker {
 	og::SimpleSetupPtr ss_;
 	int robotRadius_;
 
+    int maxWidth_;
+    int maxHeight_;
+
+
 	public:
 	//c'tor
 	MyStateValidityChecker(ompl::PPM ppm, const ob::SpaceInformationPtr &si, int robotRadius) :
 			 ob::StateValidityChecker(si) {
 		robotRadius_ = robotRadius;
 		ppm_=ppm;	
+		maxWidth_ = ppm_.getWidth() - 1;
+		maxHeight_ = ppm_.getHeight() - 1;
+
 	}
 
 	//For future reference: note that clearance is not implemented in a sensible way by ompl
@@ -106,13 +122,24 @@ class MyStateValidityChecker : public ob::StateValidityChecker {
 
 	    const int w = (int)state->as<ob::SE2StateSpace::StateType>()->getX();
 	    const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
-	
+
 		//for all x
 		for(int x = w - robotRadius_; x <= w + robotRadius_; x++){
+			if(x > maxWidth_ || x<0) {
+				continue;
+			}
 			//for all y
 			for(int y = h - robotRadius_; y <= h + robotRadius_; y++){
+				if(y > maxHeight_ || y<0) {
+					continue;
+				}
+/*
+		std::cout<<"checking X box: " << w - robotRadius_ <<":"<<w + robotRadius_<<std::endl;
+		std::cout<<"checking Y box: " << h - robotRadius_ <<":"<<h + robotRadius_<<std::endl;
+*/
+
 				//get color
-				const ompl::PPM::Color &c = ppm_.getPixel(h, w);
+				const ompl::PPM::Color &c = ppm_.getPixel(y, x);
 				//check color
 				if( c.red > 127 && c.green > 127 && c.blue > 127){
 					//if ok continue
@@ -202,17 +229,17 @@ class Plane2DEnvironment{
         if (ss_->getPlanner()){
             ss_->getPlanner()->clear();
         }
-        ss_->solve();  
+//        ss_->solve();  
         
         // generate a few solutions; all will be added to the goal;
-        /*
+        
         for (int i = 0 ; i < 10 ; ++i){
             if (ss_->getPlanner()){ //IGOR:this gets a random planner. We should choose the best planner. for more details visit http://ompl.kavrakilab.org/classompl_1_1geometric_1_1SimpleSetup.html#a8a94558b2ece27d938a92b062d55df71
                 ss_->getPlanner()->clear();
             }
             ss_->solve();
         }
-        */
+        
         const std::size_t ns = ss_->getProblemDefinition()->getSolutionCount();
         OMPL_INFORM("Found %d solutions", (int)ns);
         if (ss_->haveSolutionPath()){
@@ -421,13 +448,17 @@ int main(int argc, char **argv){
     std::cout << "OMPL version: " << OMPL_VERSION << std::endl;
 	char* filename = argv[1];
 	int radius = std::stoi(argv[2]);
+	int startX = std::stoi(argv[3]);
+	int startY = std::stoi(argv[4]);
+	int endX = std::stoi(argv[5]);
+	int endY = std::stoi(argv[6]);
 	std::cout<< "file is: " << filename << " ; radius is: " << radius << std::endl;
     //boost::filesystem::path path(TEST_RESOURCES_DIR);
 //    Plane2DEnvironment env((path / "ppm/floor.ppm").string().c_str());
 //    Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/big-map.ppm");
     Plane2DEnvironment env(filename, radius);
     //if (env.plan(15, 15, 78, 57)){
-	if (env.plan(607, 403, 162, 75)){
+	if (env.plan(startX, startY, endX, endY)){
 		env.getOrders();
         env.recordSolution();
         env.save("reduce_vertices.ppm");
