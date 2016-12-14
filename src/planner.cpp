@@ -32,6 +32,9 @@ HOW TO USE:
 #include <ompl/base/StateValidityChecker.h>
 #include <string>
 
+#include <ompl/base/objectives/StateCostIntegralObjective.h>
+
+#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 //added for pixel weight optimization
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/ProblemDefinition.h>
@@ -47,59 +50,34 @@ namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
 
-
-
-
-
-
-
-
-class WeightObjective : public ob::OptimizationObjective {
+class MyStateCostIntegralObjective : public ob::StateCostIntegralObjective {
 private:
 	ompl::PPM ppm_;
 
-
 public:
-
-	WeightObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm) : ob::OptimizationObjective(si) {
+	MyStateCostIntegralObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm) : ob::StateCostIntegralObjective(si, true) {
 		description_="rgb based state weight";
+		//TODO see about segment count factor
+//		setValidSegmentCountFactor(1);
 		//missing 
 		ppm_=ppm;
 	}
+	
 
-	//The following method is super important. You can clearly see difference in paths when changing this function.
-	//TODO: find a way to use the default distance thing
-	ob::Cost motionCost(const ob::State* s1, const ob::State* s2) const {
-		//return ob::OptimizationObjective::motionCost(s1,s2);
-		//TODO: the following procedure is done in another function. combine to avoid code copying
-        const double X = (double)s1->as<ob::SE2StateSpace::StateType>()->getX();
-        const double Y = (double)s1->as<ob::SE2StateSpace::StateType>()->getY();
-        const double next_X = (double)s2->as<ob::SE2StateSpace::StateType>()->getX();
-        const double next_Y = (double)s2->as<ob::SE2StateSpace::StateType>()->getY();
-		double distance = sqrt( pow(abs(next_X - X), 2) + pow(abs(next_Y - Y), 2) );
-		return ob::Cost(distance);
-
-		//TODO:Using the following to give weight more value
-//		return ob::Cost(0.0);
-	}
-
-	/*
-	When using just pixel color weight (namely red), it would pick to go through the darkest shade
-	*/
-	ob::Cost stateCost(const ob::State* state) const {
-	exit(1);
+	ob::Cost stateCost(const ob::State* state) const {		
         const int w = (int)state->as<ob::SE2StateSpace::StateType>()->getX();
         const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
-		std::cout<< w << ";" << h << std::endl;
+		//std::cout<< w << ";" << h << std::endl;
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
 		
 		//TODO: add check that all colors are equal
-		double weight = c.red;
+		double weight = MAX_COLOR+1 - c.red;
 		
 		return ob::Cost(weight);
 	}
-	
+
 };
+
 
 
 
@@ -216,7 +194,17 @@ class Plane2DEnvironment{
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(0.0001);
         //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
 		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
-		ss_->setOptimizationObjective(ob::OptimizationObjectivePtr(new WeightObjective(ss_->getSpaceInformation(), ppm_)));
+
+//		ss_->setOptimizationObjective(ob::OptimizationObjectivePtr(new WeightObjective(ss_->getSpaceInformation(), ppm_)));
+
+		ob::OptimizationObjectivePtr obj1p(new MyStateCostIntegralObjective(ss_->getSpaceInformation(), ppm_));
+//		ob::OptimizationObjectivePtr obj1p(new WeightObjective(ss_->getSpaceInformation(), ppm_));
+		ob::OptimizationObjectivePtr obj2p(new ob::PathLengthOptimizationObjective(ss_->getSpaceInformation()));
+		ob::MultiOptimizationObjective* moo = new ob::MultiOptimizationObjective(ss_->getSpaceInformation());
+		moo->addObjective(obj1p, 0.001);
+		moo->addObjective(obj2p, 0.001);
+
+		ss_->setOptimizationObjective(ob::OptimizationObjectivePtr(moo));
 
     }//end of constructor
 
