@@ -70,7 +70,6 @@ public:
 		
 		return ob::Cost(weight);
 	}
-
 };
 
 
@@ -83,7 +82,6 @@ private:
 	int robotRadius_;
     int maxWidth_;
     int maxHeight_;
-
 
 public:
 	//c'tor
@@ -186,7 +184,6 @@ public:
 		moo->addObjective(obj2p, 0.001);
 
 		ss_->setOptimizationObjective(ob::OptimizationObjectivePtr(moo));
-
     }//end of constructor
 
     bool plan(unsigned int start_row, unsigned int start_col, unsigned int goal_row, unsigned int goal_col){
@@ -213,6 +210,11 @@ public:
                 ss_->getPlanner()->clear();
             }
             ss_->solve();
+			//TODO: finish
+			if (ss_->haveSolutionPath()) {
+				og::PathGeometric &p = ss_->getSolutionPath();//->cost(ss_->getOptimizationObjective());
+				p->cost(ss_->getOptimizationObjective());
+			}
         }
         
         const std::size_t ns = ss_->getProblemDefinition()->getSolutionCount();
