@@ -21,7 +21,6 @@ HOW TO USE:
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/util/PPM.h>
 #include <ompl/config.h>
-//#include <../tests/resources/config.h>
 #include <ompl/geometric/PathSimplifier.h>
 #include <ompl/base/State.h>
 #include <ompl/base/spaces/SE2StateSpace.h>
@@ -41,7 +40,7 @@ HOW TO USE:
 ////////
 #define MAX_COLOR 254
 #define MIN_COLOR 0
-//#define GREY 205
+
 
 
 
@@ -58,16 +57,12 @@ public:
 	MyStateCostIntegralObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm) : ob::StateCostIntegralObjective(si, true) {
 		description_="rgb based state weight";
 		//TODO see about segment count factor
-//		setValidSegmentCountFactor(1);
-		//missing 
 		ppm_=ppm;
 	}
-	
 
 	ob::Cost stateCost(const ob::State* state) const {		
         const int w = (int)state->as<ob::SE2StateSpace::StateType>()->getX();
         const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
-		//std::cout<< w << ";" << h << std::endl;
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
 		
 		//TODO: add check that all colors are equal
@@ -82,16 +77,15 @@ public:
 
 
 class MyStateValidityChecker : public ob::StateValidityChecker {
-	private:
+private:
 	ompl::PPM ppm_;
 	og::SimpleSetupPtr ss_;
 	int robotRadius_;
-
     int maxWidth_;
     int maxHeight_;
 
 
-	public:
+public:
 	//c'tor
 	MyStateValidityChecker(ompl::PPM ppm, const ob::SpaceInformationPtr &si, int robotRadius) :
 			 ob::StateValidityChecker(si) {
@@ -99,16 +93,12 @@ class MyStateValidityChecker : public ob::StateValidityChecker {
 		ppm_=ppm;	
 		maxWidth_ = ppm_.getWidth() - 1;
 		maxHeight_ = ppm_.getHeight() - 1;
-
 	}
 
 	//For future reference: note that clearance is not implemented in a sensible way by ompl
-
 	virtual bool isValid(const ob::State* state) const {
-
 	    const int w = (int)state->as<ob::SE2StateSpace::StateType>()->getX();
 	    const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
-
 		//for all x
 		for(int x = w - robotRadius_; x <= w + robotRadius_; x++){
 			if(x > maxWidth_ || x<0) {
@@ -119,10 +109,6 @@ class MyStateValidityChecker : public ob::StateValidityChecker {
 				if(y > maxHeight_ || y<0) {
 					continue;
 				}
-/*
-		std::cout<<"checking X box: " << w - robotRadius_ <<":"<<w + robotRadius_<<std::endl;
-		std::cout<<"checking Y box: " << h - robotRadius_ <<":"<<h + robotRadius_<<std::endl;
-*/
 
 				//get color
 				const ompl::PPM::Color &c = ppm_.getPixel(y, x);
@@ -136,8 +122,7 @@ class MyStateValidityChecker : public ob::StateValidityChecker {
 			}
 		}
 		return true;
-//		return ((c.red > 127 && c.green > 127 && c.blue > 127) && (2 < ss_->getStateValidityChecker()->clearance(state)));
-	}
+	}//end of isValid
 
 };
 
@@ -145,15 +130,16 @@ class MyStateValidityChecker : public ob::StateValidityChecker {
 
 
 class Plane2DEnvironment{
-	private:
-		ompl::PPM ppm_;
+private:
+	ompl::PPM ppm_;
+    og::SimpleSetupPtr ss_;
+    int maxWidth_;
+    int maxHeight_;
+	int robotRadius_;
+	//TODO: find a solution which doesn't need explicit yaw calculation
+	std::vector<double> yawsVector;
 
-		int robotRadius_;
-
-    public:
-
-
-
+public:
     Plane2DEnvironment(const char* ppm_file, int radius){
         bool ok=false;
         try {   //opening the file
@@ -182,23 +168,18 @@ class Plane2DEnvironment{
         maxWidth_ = ppm_.getWidth() - 1;
         maxHeight_ = ppm_.getHeight() - 1;
         ss_.reset(new og::SimpleSetup(ob::StateSpacePtr(space)));
-        //set state validity checking for this space
-        //ss_->setStateValidityChecker(std::bind(&Plane2DEnvironment::isStateValid, this, std::placeholders::_1));
 
 		//create object for state validity checking
 		ss_->setStateValidityChecker(ob::StateValidityCheckerPtr(new MyStateValidityChecker(ppm_, ss_->getSpaceInformation(), robotRadius_)));
 
 
         space->setup();
-//ss_->getSpaceInformation()->setStateValidityCheckingResolution(10.0 / space->getMaximumExtent());
+
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(0.0001);
-        //ss_->setPlanner(ob::PlannerPtr(new og::RRTConnect(ss_->getSpaceInformation())));
+
 		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
 
-//		ss_->setOptimizationObjective(ob::OptimizationObjectivePtr(new WeightObjective(ss_->getSpaceInformation(), ppm_)));
-
 		ob::OptimizationObjectivePtr obj1p(new MyStateCostIntegralObjective(ss_->getSpaceInformation(), ppm_));
-//		ob::OptimizationObjectivePtr obj1p(new WeightObjective(ss_->getSpaceInformation(), ppm_));
 		ob::OptimizationObjectivePtr obj2p(new ob::PathLengthOptimizationObjective(ss_->getSpaceInformation()));
 		ob::MultiOptimizationObjective* moo = new ob::MultiOptimizationObjective(ss_->getSpaceInformation());
 		moo->addObjective(obj1p, 0.001);
@@ -225,10 +206,8 @@ class Plane2DEnvironment{
         if (ss_->getPlanner()){
             ss_->getPlanner()->clear();
         }
-//        ss_->solve();  
-        
-        // generate a few solutions; all will be added to the goal;
-        
+
+        // generate a few solutions; all will be added to the goal;        
         for (int i = 0 ; i < 10 ; ++i){
             if (ss_->getPlanner()){ //IGOR:this gets a random planner. We should choose the best planner. for more details visit http://ompl.kavrakilab.org/classompl_1_1geometric_1_1SimpleSetup.html#a8a94558b2ece27d938a92b062d55df71
                 ss_->getPlanner()->clear();
@@ -242,7 +221,6 @@ class Plane2DEnvironment{
 			//Simplifying solution
             og::PathGeometric &p = ss_->getSolutionPath();
             og::PathSimplifierPtr& pathSimplifier = ss_->getPathSimplifier();
-//            pathSimplifier->reduceVertices(p, 0, 0, 1);
 			pathSimplifier->collapseCloseVertices(p, 100, 0);
             return true;
         } else {
@@ -383,20 +361,7 @@ class Plane2DEnvironment{
 		return;
 	}
 
-    private:
-    
-    bool old_isStateValid(const ob::State *state) const {
-        const int w = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getX(), maxWidth_);
-        const int h = std::min((int)state->as<ob::SE2StateSpace::StateType>()->getY(), maxHeight_);
-		
-        const ompl::PPM::Color &c = ppm_.getPixel(h, w);
-
-		//calculate clearance, make sure it meets size of robot
-		//&& (100 < ss_->getStateValidityChecker()->clearance(state))
-        return ((c.red > 127 && c.green > 127 && c.blue > 127) );
-    } //end of isStateValid
- 
-
+private:
 	//TODO: see what happens if target and reference are at the same coordinate
 	/*
 	* Written by Igor Berendorf
@@ -430,13 +395,7 @@ class Plane2DEnvironment{
 
 
 
-	//private members
-    og::SimpleSetupPtr ss_;
-    int maxWidth_;
-    int maxHeight_;
-//    ompl::PPM ppm_;
-	//TODO: find a solution which doesn't need explicit yaw calculation
-	std::vector<double> yawsVector;
+
 
 }; //end of class
     
@@ -449,16 +408,11 @@ int main(int argc, char **argv){
 	int endX = std::stoi(argv[5]);
 	int endY = std::stoi(argv[6]);
 	std::cout<< "file is: " << filename << " ; radius is: " << radius << std::endl;
-    //boost::filesystem::path path(TEST_RESOURCES_DIR);
-//    Plane2DEnvironment env((path / "ppm/floor.ppm").string().c_str());
-//    Plane2DEnvironment env("/home/igor/robot_movement/OlgaIgor_project/gmaps/big-map.ppm");
     Plane2DEnvironment env(filename, radius);
-    //if (env.plan(15, 15, 78, 57)){
 	if (env.plan(startX, startY, endX, endY)){
 		env.getOrders();
         env.recordSolution();
         env.save("reduce_vertices.ppm");
-		//env.getClearances();
     }
     return 0;
 }
