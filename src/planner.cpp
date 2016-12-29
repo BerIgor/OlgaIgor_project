@@ -52,12 +52,14 @@ namespace og = ompl::geometric;
 class MyStateCostIntegralObjective : public ob::StateCostIntegralObjective {
 private:
 	ompl::PPM ppm_;
+	double mod_;
 
 public:
-	MyStateCostIntegralObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm) : ob::StateCostIntegralObjective(si, true) {
+	MyStateCostIntegralObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm, double modifier) : ob::StateCostIntegralObjective(si, true) {
 		description_="rgb based state weight";
 		//TODO see about segment count factor
-		ppm_=ppm;
+		ppm_ = ppm;
+		mod_ = modifier;
 	}
 
 	ob::Cost stateCost(const ob::State* state) const {		
@@ -68,7 +70,7 @@ public:
 		//TODO: add check that all colors are equal
 		double weight = MAX_COLOR+1 - c.red;
 		
-		return ob::Cost(weight);
+		return ob::Cost(weight * mod_);
 	}
 };
 
@@ -138,7 +140,7 @@ private:
 	std::vector<double> yawsVector;
 
 public:
-    Plane2DEnvironment(const char* ppm_file, int radius){
+    Plane2DEnvironment(const char* ppm_file, int radius, double probabilityModifier){
         bool ok=false;
         try {   //opening the file
             ppm_.loadFile(ppm_file);
@@ -177,7 +179,7 @@ public:
 
 		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
 
-		ob::OptimizationObjectivePtr obj1p(new MyStateCostIntegralObjective(ss_->getSpaceInformation(), ppm_));
+		ob::OptimizationObjectivePtr obj1p(new MyStateCostIntegralObjective(ss_->getSpaceInformation(), ppm_, probabilityModifier));
 		ob::OptimizationObjectivePtr obj2p(new ob::PathLengthOptimizationObjective(ss_->getSpaceInformation()));
 		ob::MultiOptimizationObjective* moo = new ob::MultiOptimizationObjective(ss_->getSpaceInformation());
 		moo->addObjective(obj1p, 0.001);
@@ -401,7 +403,7 @@ private:
 }; //end of class
 
 
-//possible runs
+//possible runs TODO add modifiers
 //./a.out gmaps/clearance_tests.ppm 2 53 1050 1540 1095
 //./a.out gmaps/big-map.ppm 1 730 550 55 49
 int main(int argc, char **argv){
@@ -412,8 +414,9 @@ int main(int argc, char **argv){
 	int startY = std::stoi(argv[4]);
 	int endX = std::stoi(argv[5]);
 	int endY = std::stoi(argv[6]);
+	double probabilityModifier = std::stoi(argv[7]);
 	std::cout<< "file is: " << filename << " ; radius is: " << radius << std::endl;
-    Plane2DEnvironment env(filename, radius);
+    Plane2DEnvironment env(filename, radius, probabilityModifier);
 	if (env.plan(startX, startY, endX, endY)){
 		env.getOrders();
         env.recordSolution();
