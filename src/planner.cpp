@@ -210,10 +210,9 @@ public:
                 ss_->getPlanner()->clear();
             }
             ss_->solve();
-			//TODO: finish
 			if (ss_->haveSolutionPath()) {
-				og::PathGeometric &p = ss_->getSolutionPath();//->cost(ss_->getOptimizationObjective());
-				p->cost(ss_->getOptimizationObjective());
+				//TODO: discuss: it appears that ompl picks the lowest cost path. how is cost computed? need maps for that?
+				std::cout << ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()) << std::endl;
 			}
         }
         
@@ -400,7 +399,11 @@ private:
 
 
 }; //end of class
-    
+
+
+//possible runs
+//./a.out gmaps/clearance_tests.ppm 2 53 1050 1540 1095
+//./a.out gmaps/big-map.ppm 1 730 550 55 49
 int main(int argc, char **argv){
     std::cout << "OMPL version: " << OMPL_VERSION << std::endl;
 	char* filename = argv[1];
