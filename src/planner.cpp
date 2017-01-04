@@ -7,7 +7,7 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 
 HOW TO USE:
 
-<.exe> <path to map> <robot radius> <start x> <start y> <end x> <end y>
+<.exe> <path to map> <robot radius> <start x> <start y> <end x> <end y> <probability modifier>
 
 
 */
@@ -55,11 +55,9 @@ private:
 	double mod_;
 
 public:
-	MyStateCostIntegralObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm, double modifier) : ob::StateCostIntegralObjective(si, true) {
+	MyStateCostIntegralObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm) : ob::StateCostIntegralObjective(si, true) {
 		description_="rgb based state weight";
-		//TODO see about segment count factor
 		ppm_ = ppm;
-		mod_ = modifier;
 	}
 
 	ob::Cost stateCost(const ob::State* state) const {		
@@ -70,7 +68,7 @@ public:
 		//TODO: add check that all colors are equal
 		double weight = MAX_COLOR+1 - c.red;
 		
-		return ob::Cost(weight * mod_);
+		return ob::Cost(weight);
 	}
 };
 
@@ -113,7 +111,7 @@ public:
 				//get color
 				const ompl::PPM::Color &c = ppm_.getPixel(y, x);
 				//check color
-				if( c.red > 127 && c.green > 127 && c.blue > 127){
+				if( c.red > 10 && c.green > 10 && c.blue > 10){
 					//if ok continue
 					continue;
 				} else {
@@ -136,11 +134,10 @@ private:
     int maxWidth_;
     int maxHeight_;
 	int robotRadius_;
-	//TODO: find a solution which doesn't need explicit yaw calculation
 	std::vector<double> yawsVector;
 
 public:
-    Plane2DEnvironment(const char* ppm_file, int radius, double probabilityModifier){
+    Plane2DEnvironment(const char* ppm_file, int radius, double probabilityModifier, double lengthModifier){
         bool ok=false;
         try {   //opening the file
             ppm_.loadFile(ppm_file);
@@ -171,19 +168,21 @@ public:
 
 		//create object for state validity checking
 		ss_->setStateValidityChecker(ob::StateValidityCheckerPtr(new MyStateValidityChecker(ppm_, ss_->getSpaceInformation(), robotRadius_)));
-
+		
 
         space->setup();
+		//This changes nothing
+		//space->setValidSegmentCountFactor(10);
 
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(0.0001);
 
 		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
 
-		ob::OptimizationObjectivePtr obj1p(new MyStateCostIntegralObjective(ss_->getSpaceInformation(), ppm_, probabilityModifier));
+		ob::OptimizationObjectivePtr obj1p(new MyStateCostIntegralObjective(ss_->getSpaceInformation(), ppm_));
 		ob::OptimizationObjectivePtr obj2p(new ob::PathLengthOptimizationObjective(ss_->getSpaceInformation()));
 		ob::MultiOptimizationObjective* moo = new ob::MultiOptimizationObjective(ss_->getSpaceInformation());
-		moo->addObjective(obj1p, 0.001);
-		moo->addObjective(obj2p, 0.001);
+		moo->addObjective(obj1p, probabilityModifier);
+		moo->addObjective(obj2p, lengthModifier);
 
 		ss_->setOptimizationObjective(ob::OptimizationObjectivePtr(moo));
     }//end of constructor
@@ -212,26 +211,28 @@ public:
                 ss_->getPlanner()->clear();
             }
             ss_->solve();
-			if (ss_->haveSolutionPath()) {
-				//TODO: discuss: it appears that ompl picks the lowest cost path. how is cost computed? need maps for that?
+			if (ss_->haveSolutionPath()) {		
 				std::cout << ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()) << std::endl;
+				this->recordSolution((i+1)*25);
 			}
         }
-        
+    
         const std::size_t ns = ss_->getProblemDefinition()->getSolutionCount();
         OMPL_INFORM("Found %d solutions", (int)ns);
         if (ss_->haveSolutionPath()){
 			//Simplifying solution
             og::PathGeometric &p = ss_->getSolutionPath();
             og::PathSimplifierPtr& pathSimplifier = ss_->getPathSimplifier();
-			pathSimplifier->collapseCloseVertices(p, 100, 0);
+			pathSimplifier->shortcutPath(p);
+			pathSimplifier->collapseCloseVertices(p);
+			std::cout << ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()) << std::endl;
             return true;
         } else {
             return false;
         }
     } //end of plan
 
-    void recordSolution(){
+    void recordSolution(int color){
         if (!ss_ || !ss_->haveSolutionPath()){
             return;
         }
@@ -241,7 +242,7 @@ public:
             const int w = std::min(maxWidth_, (int)p.getState(i)->as<ob::SE2StateSpace::StateType>()->getX());
             const int h = std::min(maxHeight_, (int)p.getState(i)->as<ob::SE2StateSpace::StateType>()->getY());
             ompl::PPM::Color &c = ppm_.getPixel(h, w);
-            c.red = 255;
+            c.red = color;
             c.green = 0;
             c.blue = 0;
         }
@@ -365,7 +366,6 @@ public:
 	}
 
 private:
-	//TODO: see what happens if target and reference are at the same coordinate
 	/*
 	* Written by Igor Berendorf
 	* getRelativeQuadrant
@@ -404,8 +404,10 @@ private:
 
 
 //possible runs TODO add modifiers
-//./a.out gmaps/clearance_tests.ppm 2 53 1050 1540 1095
-//./a.out gmaps/big-map.ppm 1 730 550 55 49
+//./a.out gmaps/test_maps/prob_3.ppm 3 109 155 540 260 1
+//./a.out gmaps/clearance_tests.ppm 2 53 1050 1540 1095 X
+//./a.out gmaps/big-map.ppm 1 730 550 55 49 X
+//./a.out gmaps/big-map.ppm 1 730 550 55 49 X
 int main(int argc, char **argv){
     std::cout << "OMPL version: " << OMPL_VERSION << std::endl;
 	char* filename = argv[1];
@@ -415,11 +417,12 @@ int main(int argc, char **argv){
 	int endX = std::stoi(argv[5]);
 	int endY = std::stoi(argv[6]);
 	double probabilityModifier = std::stoi(argv[7]);
+ 	double lengthModifier = std::stoi(argv[8]);
 	std::cout<< "file is: " << filename << " ; radius is: " << radius << std::endl;
-    Plane2DEnvironment env(filename, radius, probabilityModifier);
+    Plane2DEnvironment env(filename, radius, probabilityModifier, lengthModifier);
 	if (env.plan(startX, startY, endX, endY)){
 		env.getOrders();
-        env.recordSolution();
+        env.recordSolution(250);
         env.save("reduce_vertices.ppm");
     }
     return 0;
