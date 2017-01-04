@@ -66,7 +66,7 @@ public:
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
 		
 		//TODO: add check that all colors are equal
-		double weight = MAX_COLOR+1 - c.red;
+		double weight = MAX_COLOR - c.red;
 		
 		return ob::Cost(weight);
 	}
@@ -172,11 +172,13 @@ public:
 
         space->setup();
 		//This changes nothing
-		//space->setValidSegmentCountFactor(10);
+		space->setValidSegmentCountFactor(10);
 
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(0.0001);
 
-		ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
+		//ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
+		ss_->setPlanner(ob::PlannerPtr(new og::RRTstar(ss_->getSpaceInformation())));
+
 
 		ob::OptimizationObjectivePtr obj1p(new MyStateCostIntegralObjective(ss_->getSpaceInformation(), ppm_));
 		ob::OptimizationObjectivePtr obj2p(new ob::PathLengthOptimizationObjective(ss_->getSpaceInformation()));
