@@ -1,8 +1,8 @@
 /*
 Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 */
-
-
+//TODO: play with K- on or off, see if can change it
+//TODO: play with range
 /*
 
 HOW TO USE:
@@ -30,7 +30,7 @@ HOW TO USE:
 #include <math.h>
 #include <ompl/base/StateValidityChecker.h>
 #include <string>
-
+#include <ompl/base/DiscreteMotionValidator.h>
 #include <ompl/base/objectives/StateCostIntegralObjective.h>
 
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
@@ -174,11 +174,14 @@ public:
 		//This changes nothing
 		space->setValidSegmentCountFactor(10);
 
-        ss_->getSpaceInformation()->setStateValidityCheckingResolution(0.0001);
+		//By default DiscreteMotionValidator is used, but let's call it anyway
+		ss_->getSpaceInformation()->setMotionValidator(ob::MotionValidatorPtr(new ob::DiscreteMotionValidator(ss_->getSpaceInformation())));
+        ss_->getSpaceInformation()->setStateValidityCheckingResolution(0.0001); //Increasing this value results in larger distance between states
 
 		//ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
-		ss_->setPlanner(ob::PlannerPtr(new og::RRTstar(ss_->getSpaceInformation())));
-
+		og::RRTstar* rrtPlanner = new og::RRTstar(ss_->getSpaceInformation());
+		rrtPlanner->setKNearest(false);
+		ss_->setPlanner(ob::PlannerPtr(rrtPlanner));
 
 		ob::OptimizationObjectivePtr obj1p(new MyStateCostIntegralObjective(ss_->getSpaceInformation(), ppm_));
 		ob::OptimizationObjectivePtr obj2p(new ob::PathLengthOptimizationObjective(ss_->getSpaceInformation()));
@@ -208,7 +211,7 @@ public:
         }
 
         // generate a few solutions; all will be added to the goal;        
-        for (int i = 0 ; i < 10 ; ++i){
+        for (int i = 0 ; i < 50 ; ++i){
             if (ss_->getPlanner()){ //IGOR:this gets a random planner. We should choose the best planner. for more details visit http://ompl.kavrakilab.org/classompl_1_1geometric_1_1SimpleSetup.html#a8a94558b2ece27d938a92b062d55df71
                 ss_->getPlanner()->clear();
             }
@@ -410,6 +413,7 @@ private:
 //./a.out gmaps/clearance_tests.ppm 2 53 1050 1540 1095 X
 //./a.out gmaps/big-map.ppm 1 730 550 55 49 X
 //./a.out gmaps/big-map.ppm 1 730 550 55 49 X
+
 int main(int argc, char **argv){
     std::cout << "OMPL version: " << OMPL_VERSION << std::endl;
 	char* filename = argv[1];
