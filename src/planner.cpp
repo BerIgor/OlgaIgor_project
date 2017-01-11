@@ -7,7 +7,7 @@ Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
 
 HOW TO USE:
 
-<.exe> <path to map> <robot radius> <start x> <start y> <end x> <end y> <probability modifier>
+<.exe> <path to map> <robot radius> <start x> <start y> <end x> <end y> <probability modifier> <length modifier> <outputfile name>
 
 
 */
