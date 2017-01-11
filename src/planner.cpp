@@ -214,9 +214,9 @@ public:
         for (int i = 0 ; i < 30 ; ++i){
 			std::cout<< "_____________________"<<std::endl;
 			std::cout << "====Iteration "<<i<<"===="<<std::endl;
-            //if (ss_->getPlanner()){ //IGOR:this gets a random planner. We should choose the best planner. for more details visit http://ompl.kavrakilab.org/classompl_1_1geometric_1_1SimpleSetup.html#a8a94558b2ece27d938a92b062d55df71
-            //    ss_->getPlanner()->clear();
-            //}
+            if (ss_->getPlanner()){ //IGOR:this gets a random planner. We should choose the best planner. for more details visit http://ompl.kavrakilab.org/classompl_1_1geometric_1_1SimpleSetup.html#a8a94558b2ece27d938a92b062d55df71
+                ss_->getPlanner()->clear();
+            }
             ss_->solve();
 			if (ss_->haveSolutionPath()) {		
 				std::cout << ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()) << std::endl;
@@ -421,14 +421,19 @@ int main(int argc, char **argv){
 	int endY = std::stoi(argv[6]);
 	double probabilityModifier = std::stoi(argv[7]);
  	double lengthModifier = std::stoi(argv[8]);
-//	char* outputFileChar = argv[9];
-	std::string outputFile(argv[9]);
+	char* outputFile = argv[9];
+	const char* type = ".ppm";
+	strcat(outputFile, type);
+
+//	std::string outputFile = new std::string(argv[9]);
+//	std::string outputFile(argv[9]);
 	std::cout<< "file is: " << filename << " ; radius is: " << radius << std::endl;
+	std::cout<<"output file is "<<outputFile<< std::endl;
     Plane2DEnvironment env(filename, radius, probabilityModifier, lengthModifier);
 	if (env.plan(startX, startY, endX, endY)){
 		env.getOrders();
         env.recordSolution(250);
-        env.save(+".ppm");
+        env.save(outputFile);
     }
     return 0;
 }
