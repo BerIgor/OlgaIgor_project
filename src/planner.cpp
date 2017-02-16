@@ -19,6 +19,8 @@ HOW TO USE:
 #include <ompl/geometric/planners/prm/PRMstar.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <ompl/geometric/planners/fmt/FMT.h>
+#include <ompl/geometric/planners/rrt/TRRT.h>
 #include <ompl/util/PPM.h>
 #include <ompl/config.h>
 #include <ompl/geometric/PathSimplifier.h>
@@ -53,6 +55,7 @@ class MyStateCostIntegralObjective : public ob::StateCostIntegralObjective {
 private:
 	ompl::PPM ppm_;
 	double mod_;
+	double startYaw;
 
 public:
 	MyStateCostIntegralObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm) : ob::StateCostIntegralObjective(si, true) {
@@ -124,9 +127,6 @@ public:
 
 };
 
-
-
-
 class Plane2DEnvironment{
 private:
 	ompl::PPM ppm_;
@@ -137,7 +137,7 @@ private:
 	std::vector<double> yawsVector;
 
 public:
-    Plane2DEnvironment(const char* ppm_file, int radius, double probabilityModifier, double lengthModifier){
+    Plane2DEnvironment(const char* ppm_file, int radius, double probabilityModifier, double lengthModifier, char* plannerName){
         bool ok=false;
         try {   //opening the file
             ppm_.loadFile(ppm_file);
@@ -149,7 +149,7 @@ public:
 		if(!ok){
 			return;
 		}
-
+		
 		robotRadius_ = radius;
 
 		ob::SE2StateSpace *space = new ob::SE2StateSpace();
@@ -168,7 +168,6 @@ public:
 
 		//create object for state validity checking
 		ss_->setStateValidityChecker(ob::StateValidityCheckerPtr(new MyStateValidityChecker(ppm_, ss_->getSpaceInformation(), robotRadius_)));
-		
 
         space->setup();
 		//This changes nothing
@@ -179,9 +178,25 @@ public:
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(0.0001); //Increasing this value results in larger distance between states
 
 		//ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
-		og::RRTstar* rrtPlanner = new og::RRTstar(ss_->getSpaceInformation());
-		rrtPlanner->setKNearest(true);
-		ss_->setPlanner(ob::PlannerPtr(rrtPlanner));
+		//TODO finish
+		//Choose the planner
+		ob::Planner* planner;
+		if (!strcmp(plannerName, "prmstar")) {
+			planner = new og::PRMstar(ss_->getSpaceInformation());
+		} else if (!strcmp(plannerName, "rrtstar")) {
+			//og::RRTstar* rrtPlanner = new og::RRTstar(ss_->getSpaceInformation());
+			//rrtPlanner->setKNearest(true);
+			planner = new og::RRTstar(ss_->getSpaceInformation());
+		} else 	if (!strcmp(plannerName, "fmtstar")) {
+			planner = new og::FMT(ss_->getSpaceInformation());
+		} else 	if (!strcmp(plannerName, "trrt")) {
+			planner = new og::TRRT(ss_->getSpaceInformation());
+		} else {
+			std::cout<< "Illegal planner name" <<std::endl;
+			exit(1);
+		}
+
+		ss_->setPlanner(ob::PlannerPtr(planner));
 
 		ob::OptimizationObjectivePtr obj1p(new MyStateCostIntegralObjective(ss_->getSpaceInformation(), ppm_));
 		ob::OptimizationObjectivePtr obj2p(new ob::PathLengthOptimizationObjective(ss_->getSpaceInformation()));
@@ -192,7 +207,7 @@ public:
 		ss_->setOptimizationObjective(ob::OptimizationObjectivePtr(moo));
     }//end of constructor
 
-    bool plan(unsigned int start_row, unsigned int start_col, unsigned int goal_row, unsigned int goal_col){
+    bool plan(unsigned int start_row, unsigned int start_col, int start_yaw, unsigned int goal_row, unsigned int goal_col, int iterations, double attempt_duration){
         if (!ss_){
             return false;
         }
@@ -211,13 +226,13 @@ public:
         }
 
         // generate a few solutions; all will be added to the goal;        
-        for (int i = 0 ; i < 30 ; ++i){
+        for (int i = 0 ; i < iterations ; ++i){
 			std::cout<< "_____________________"<<std::endl;
-			std::cout << "====Iteration "<<i<<"===="<<std::endl;
-            if (ss_->getPlanner()){ //IGOR:this gets a random planner. We should choose the best planner. for more details visit http://ompl.kavrakilab.org/classompl_1_1geometric_1_1SimpleSetup.html#a8a94558b2ece27d938a92b062d55df71
+			std::cout << "====Iteration "<<i+1<<"===="<<std::endl;
+            if (ss_->getPlanner()){
                 ss_->getPlanner()->clear();
             }
-            ss_->solve();
+            ss_->solve(attempt_duration);
 			if (ss_->haveSolutionPath()) {		
 				std::cout << ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()) << std::endl;
 				this->recordSolution((i+1)*25);
@@ -233,7 +248,8 @@ public:
 			pathSimplifier->shortcutPath(p);
 			pathSimplifier->collapseCloseVertices(p);
 			std::cout << ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()) << std::endl;
-            return true;
+			updateYaws(start_yaw);            
+			return true;
         } else {
             return false;
         }
@@ -266,14 +282,12 @@ public:
 
 	//TODO: Write to accomodate varying initial yaw.
 	/*
-	 * Written by Igor Berendorf
 	 * getOrders will print to stdout the orders for the robot
 	 */
-	void getOrders(){
+	void getOrders(double initialYaw){
 		og::PathGeometric &p = ss_->getSolutionPath();
-		updateYaws();
 		//TODO: fix. assuming initial orientation is 0
-		double previous_yaw=0;
+		double previous_yaw=initialYaw;
 		double yaw;
 
 
@@ -311,7 +325,7 @@ public:
 	 * and add them to the solution path as the 3rd dimension
 	 * NOTE: These yaws are the angle (0-360) at which to travel
 	 */
-	void updateYaws(){
+	void updateYaws(double initialYaw){
 
 		if (!ss_->haveSolutionPath()){ //no solution
 			return;
@@ -323,6 +337,7 @@ public:
 
 		//This solution is not optimal. It uses {(#ofWaypoints-1) * 4} casts.
 		//A better solution would be to use variables to represent the previous state
+		double yaw = initialYaw;
 		for(int i=0; i<waypoints.size()-1; i++){
 
 			ob::State* current_state=waypoints[i];
@@ -339,7 +354,8 @@ public:
 			double X_diff = abs(next_X - X);
 			double angle = atan2(Y_diff, X_diff) * 180/M_PI;
 				
-			double yaw=0;
+			//double yaw=0;
+			
 			switch (rel_quadrant){
 				case 1:
 					yaw = angle;
@@ -357,6 +373,7 @@ public:
 					std::cout<<"ERROR"<<std::endl;				
 			}//end of switch case		
 			yawsVector.push_back(yaw); //update the yawVecotr
+			yaw = 0;
 		}//end of for
 		return;
 	}//end of calcYaws
@@ -374,7 +391,6 @@ public:
 
 private:
 	/*
-	* Written by Igor Berendorf
 	* getRelativeQuadrant
 	* NOTE: This function works with ompl's basic coordinate system (inverted y axis)
 	* 		but will return the relative quadrant in regular coordinates
@@ -405,33 +421,40 @@ private:
 }; //end of class
 
 
-//possible runs TODO add modifiers
-//./a.out gmaps/test_maps/prob_3.ppm 3 109 155 540 260 1
-//./a.out gmaps/clearance_tests.ppm 2 53 1050 1540 1095 X
-//./a.out gmaps/big-map.ppm 1 730 550 55 49 X
-//./a.out gmaps/big-map.ppm 1 730 550 55 49 X
+//program parameters <map_file> <radius> <start_X> <start_Y> <start_YAW> <goal_X> <goal_Y> <planner> <probability_mod> <length_mod> <iteration_count> <time_per_iteration> <output_file>
+//example:
+//./a.out /home/igor/robot_movement/OlgaIgor_project/gmaps/map_full.ppm 1 1822 4842 0 328 1136 rrtstar 1 1 10 1 test_sol
+//available planners: prmstar, rrtstar, fmtstar, trrt
 
 int main(int argc, char **argv){
     std::cout << "OMPL version: " << OMPL_VERSION << std::endl;
+
 	char* filename = argv[1];
 	int radius = std::stoi(argv[2]);
 	int startX = std::stoi(argv[3]);
 	int startY = std::stoi(argv[4]);
-	int endX = std::stoi(argv[5]);
-	int endY = std::stoi(argv[6]);
-	double probabilityModifier = std::stoi(argv[7]);
- 	double lengthModifier = std::stoi(argv[8]);
-	char* outputFile = argv[9];
+	int startYaw = std::stoi(argv[5]);
+
+	int endX = std::stoi(argv[6]);
+	int endY = std::stoi(argv[7]);
+
+	char* plannerName = argv[8];
+
+	double probabilityModifier = std::stoi(argv[9]);
+ 	double lengthModifier = std::stoi(argv[10]);
+
+	int iterations = std::stoi(argv[11]);
+	double maxIterationDuration = std::stoi(argv[12]);
+
+	char* outputFile = argv[13];
 	const char* type = ".ppm";
 	strcat(outputFile, type);
 
-//	std::string outputFile = new std::string(argv[9]);
-//	std::string outputFile(argv[9]);
 	std::cout<< "file is: " << filename << " ; radius is: " << radius << std::endl;
 	std::cout<<"output file is "<<outputFile<< std::endl;
-    Plane2DEnvironment env(filename, radius, probabilityModifier, lengthModifier);
-	if (env.plan(startX, startY, endX, endY)){
-		env.getOrders();
+    Plane2DEnvironment env(filename, radius, probabilityModifier, lengthModifier, plannerName);
+	if (env.plan(startX, startY, startYaw, endX, endY, iterations, maxIterationDuration)){
+		env.getOrders(startYaw);
         env.recordSolution(250);
         env.save(outputFile);
     }
