@@ -1,19 +1,3 @@
-/*
-Copying from: http://ompl.kavrakilab.org/Point2DPlanning_8cpp_source.html
-*/
-//TODO: play with K- on or off, see if can change it
-//TODO: play with range
-/*
-
-HOW TO USE:
-
-<.exe> <path to map> <robot radius> <start x> <start y> <end x> <end y> <probability modifier> <length modifier> <outputfile name>
-
-
-*/
-
-
-
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/geometric/planners/prm/PRMstar.h>
@@ -34,6 +18,10 @@ HOW TO USE:
 #include <string>
 #include <ompl/base/DiscreteMotionValidator.h>
 #include <ompl/base/objectives/StateCostIntegralObjective.h>
+
+//for log output
+#include <fstream>
+
 
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 //added for pixel weight optimization
@@ -68,7 +56,7 @@ public:
         const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
 		
-		//TODO: add check that all colors are equal
+		//TODO: add check that all colors are equal?
 		double weight = MAX_COLOR - c.red;
 		
 		return ob::Cost(weight);
@@ -136,7 +124,24 @@ private:
 	int robotRadius_;
 	std::vector<double> yawsVector;
 
+	int approxSolutions;
+	int exactSolutions;
+	double minimalCost;
+
 public:
+
+	int getApproxmiateSolutionCount(){
+		return approxSolutions;
+	}
+
+	int getExactSolutionCount(){
+		return exactSolutions;
+	}
+
+	double getMinimalCost(){
+		return minimalCost;
+	}
+
     Plane2DEnvironment(const char* ppm_file, int radius, double probabilityModifier, double lengthModifier, char* plannerName){
         bool ok=false;
         try {   //opening the file
@@ -151,7 +156,9 @@ public:
 		}
 		
 		robotRadius_ = radius;
-
+		approxSolutions = 0;
+		exactSolutions = 0;
+		minimalCost = -1.0;
 		ob::SE2StateSpace *space = new ob::SE2StateSpace();
 
 		//define bounds
@@ -177,7 +184,6 @@ public:
 		ss_->getSpaceInformation()->setMotionValidator(ob::MotionValidatorPtr(new ob::DiscreteMotionValidator(ss_->getSpaceInformation())));
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(0.0001); //Increasing this value results in larger distance between states
 
-		//ss_->setPlanner(ob::PlannerPtr(new og::PRMstar(ss_->getSpaceInformation())));
 		//TODO finish
 		//Choose the planner
 		ob::Planner* planner;
@@ -233,8 +239,21 @@ public:
                 ss_->getPlanner()->clear();
             }
             ss_->solve(attempt_duration);
-			if (ss_->haveSolutionPath()) {		
-				std::cout << ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()) << std::endl;
+
+			if (ss_->haveExactSolutionPath()){
+				exactSolutions++;
+			}
+			if (ss_->haveSolutionPath()){
+				approxSolutions++;
+			}
+
+			if (ss_->haveSolutionPath()) {
+				double currentCost = ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()).value();
+				std::cout << currentCost << std::endl;
+				//update minimal path cost
+				if(minimalCost > currentCost || minimalCost == -1.0){
+					minimalCost = currentCost;
+				}
 				this->recordSolution((i+1)*25);
 			}
         }
@@ -421,7 +440,7 @@ private:
 }; //end of class
 
 
-//program parameters <map_file> <radius> <start_X> <start_Y> <start_YAW> <goal_X> <goal_Y> <planner> <probability_mod> <length_mod> <iteration_count> <time_per_iteration> <output_file>
+//program parameters <map_file> <radius> <start_X> <start_Y> <start_YAW> <goal_X> <goal_Y> <planner> <probability_mod> <length_mod> <iteration_count> <time_per_iteration> <output_log_file> <output_ppm_file> 
 //example:
 //./a.out /home/igor/robot_movement/OlgaIgor_project/gmaps/map_full.ppm 1 1822 4842 0 328 1136 rrtstar 1 1 10 1 test_sol
 //available planners: prmstar, rrtstar, fmtstar, trrt
@@ -446,9 +465,17 @@ int main(int argc, char **argv){
 	int iterations = std::stoi(argv[11]);
 	double maxIterationDuration = std::stoi(argv[12]);
 
-	char* outputFile = argv[13];
+
+	//TODO is this correct programming?
+	char* log = argv[13];
+	std::ofstream out;
+	out.open(log, std::ios::app);
+
+
+	char* outputFile = argv[14];
 	const char* type = ".ppm";
 	strcat(outputFile, type);
+
 
 	std::cout<< "file is: " << filename << " ; radius is: " << radius << std::endl;
 	std::cout<<"output file is "<<outputFile<< std::endl;
@@ -458,6 +485,14 @@ int main(int argc, char **argv){
         env.recordSolution(250);
         env.save(outputFile);
     }
+
+	//NOTE: approximate solutions (according to ompl) include exact solutions
+	out<<plannerName<<","<< env.getApproxmiateSolutionCount() - env.getExactSolutionCount() << "," << env.getExactSolutionCount() << "," << env.getMinimalCost() << std::endl;	
+
+
+
+	out.close();
+
     return 0;
 }
 
