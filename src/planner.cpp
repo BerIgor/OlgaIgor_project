@@ -442,7 +442,7 @@ private:
 
 //program parameters <map_file> <radius> <start_X> <start_Y> <start_YAW> <goal_X> <goal_Y> <planner> <probability_mod> <length_mod> <iteration_count> <time_per_iteration> <output_log_file> <output_ppm_file> 
 //example:
-//./a.out /home/igor/robot_movement/OlgaIgor_project/gmaps/map_full.ppm 1 1822 4842 0 328 1136 rrtstar 1 1 10 1 test_sol
+//./a.out /home/igor/robot_movement/OlgaIgor_project/gmaps/map_full.ppm 1 1822 4842 0 328 1136 rrtstar 1 1 10 1 test_log test_sol
 //available planners: prmstar, rrtstar, fmtstar, trrt
 
 int main(int argc, char **argv){
