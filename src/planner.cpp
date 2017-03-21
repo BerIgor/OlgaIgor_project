@@ -127,6 +127,7 @@ private:
 	int approxSolutions;
 	int exactSolutions;
 	double minimalCost;
+	double finalCost;
 
 public:
 
@@ -140,6 +141,10 @@ public:
 
 	double getMinimalCost(){
 		return minimalCost;
+	}
+
+	double getFinalCost(){
+		return finalCost;
 	}
 
     Plane2DEnvironment(const char* ppm_file, int radius, double probabilityModifier, double lengthModifier, char* plannerName){
@@ -267,6 +272,7 @@ public:
 			pathSimplifier->shortcutPath(p);
 			pathSimplifier->collapseCloseVertices(p);
 			std::cout << ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()) << std::endl;
+			finalCost = ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()).value();
 			updateYaws(start_yaw);            
 			return true;
         } else {
@@ -487,7 +493,7 @@ int main(int argc, char **argv){
     }
 
 	//NOTE: approximate solutions (according to ompl) include exact solutions
-	out<<plannerName<<","<< env.getApproxmiateSolutionCount() - env.getExactSolutionCount() << "," << env.getExactSolutionCount() << "," << env.getMinimalCost() << std::endl;	
+	out<<plannerName<<","<< env.getApproxmiateSolutionCount() - env.getExactSolutionCount() << "," << env.getExactSolutionCount() << "," << env.getFinalCost() <<  "," << iterations << "," << maxIterationDuration << std::endl;	
 
 
 
