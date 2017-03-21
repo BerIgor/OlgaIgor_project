@@ -259,7 +259,8 @@ public:
 				if(minimalCost > currentCost || minimalCost == -1.0){
 					minimalCost = currentCost;
 				}
-				this->recordSolution((i+1)*25);
+				//commented out so we have a clean solution path
+				//this->recordSolution((i+1)*25);
 			}
         }
     
