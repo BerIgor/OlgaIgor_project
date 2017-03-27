@@ -322,14 +322,14 @@ public:
 		for(int i=0; i<waypoints.size()-1; i++){
 			ob::State* state=waypoints[i];
 			ob::State* next_state=waypoints[i+1];
-	        const double X = (double)state->as<ob::SE2StateSpace::StateType>()->getX();
-            const double Y = (double)state->as<ob::SE2StateSpace::StateType>()->getY();
-	        const double next_X = (double)next_state->as<ob::SE2StateSpace::StateType>()->getX();
-	        const double next_Y = (double)next_state->as<ob::SE2StateSpace::StateType>()->getY();
+	        	const double X = (double)state->as<ob::SE2StateSpace::StateType>()->getX();
+            		const double Y = (double)state->as<ob::SE2StateSpace::StateType>()->getY();
+	        	const double next_X = (double)next_state->as<ob::SE2StateSpace::StateType>()->getX();
+	        	const double next_Y = (double)next_state->as<ob::SE2StateSpace::StateType>()->getY();
 			yaw=yawsVector[i];
 
 			//get the turn
-			double turn = 360-previous_yaw+yaw;
+			double turn = 360-previous_yaw-yaw;
 			if (turn>180) {
 				turn = turn -360;
 			}
@@ -366,38 +366,44 @@ public:
 		double yaw = initialYaw;
 		for(int i=0; i<waypoints.size()-1; i++){
 
-			ob::State* current_state=waypoints[i];
-			ob::State* next_state=waypoints[i+1];
-	        const double X = (double)current_state->as<ob::SE2StateSpace::StateType>()->getX();
-            const double Y = (double)current_state->as<ob::SE2StateSpace::StateType>()->getY();
-	        const double next_X = (double)next_state->as<ob::SE2StateSpace::StateType>()->getX();
-            const double next_Y = (double)next_state->as<ob::SE2StateSpace::StateType>()->getY();
+			ob::State* current_state = waypoints[i];
+			ob::State* next_state = waypoints[i+1];
+	        	const double X = (double)current_state->as<ob::SE2StateSpace::StateType>()->getX();
+            		const double Y = (double)current_state->as<ob::SE2StateSpace::StateType>()->getY();
+	        	const double next_X = (double)next_state->as<ob::SE2StateSpace::StateType>()->getX();
+           		const double next_Y = (double)next_state->as<ob::SE2StateSpace::StateType>()->getY();
+			bool is_yaw = false;
 
 			//depends on the quadrant
-			unsigned int rel_quadrant=getRelativeQuadrant(X, Y, next_X, next_Y);
+			unsigned int rel_quadrant = getRelativeQuadrant(X, Y, next_X, next_Y);
 
-			double Y_diff = abs(next_Y - Y);
-			double X_diff = abs(next_X - X);
-			double angle = atan2(Y_diff, X_diff) * 180/M_PI;
+			double Y_diff = next_Y - Y;
+			double X_diff = next_X - X;
+			double angle = atan2(abs(Y_diff), abs(X_diff)) * 180/M_PI;
+
+			if (Y_diff==0) {
+	  			if (X_diff<0){
+	  				yaw = 180;
+					is_yaw = true;
+	  			} else {
+	  				yaw = 0;
+					is_yaw = true;
+	  			}
+  			} else if(X_diff==0){
+  				if(Y_diff>0){
+  					yaw = 90;
+					is_yaw = true;
+  				} else {
+  					yaw = 270;
+					is_yaw = true;
+  				}
+			}
 				
 			//double yaw=0;
 			
-			switch (rel_quadrant){
-				case 1:
-					yaw = angle;
-					break;
-				case 2:
-					yaw = 180 - angle;
-					break;
-				case 3:
-					yaw = 180 + angle;
-					break;
-				case 4:
-					yaw = 360 - angle;
-					break;								
-				default:
-					std::cout<<"ERROR"<<std::endl;				
-			}//end of switch case		
+			if (!is_yaw){
+				yaw = angle + 90 * (rel_quadrant-1);
+			}
 			yawsVector.push_back(yaw); //update the yawVecotr
 			yaw = 0;
 		}//end of for
@@ -424,25 +430,19 @@ private:
 	* Returns the relative quadrant of Target to Origin (1 to 4)
 	*/
 	unsigned int getRelativeQuadrant(double x_ref, double y_ref, double x_tar, double y_tar){
-		unsigned int quadrants[4]={1, 2, 3, 4};
-		if( x_tar > x_ref ){
-			quadrants[1] = quadrants[2] = 0;
-		} else {
-			quadrants[0] = quadrants[3] = 0;
-		}
-		//NOTE: Due to the Y axis being vertically flipped, the condition here is different
-		if( y_tar > y_ref ){
-			quadrants[0] = quadrants[1] = 0;
-		} else {
-			quadrants[2] = quadrants[3] = 0;
-		}
-		int i;
-		for(i=0; i<4; i++){	//find the only quadrant not set to 0
-			if (quadrants[i] != 0) {
-				break;
-			}
-		}
-		return quadrants[i];
+		if(y_tar>y_ref){//if he higher
+  			if(x_tar>x_ref){//if he righter
+  				return 1;
+  			} else {
+  				return 2;
+  			}
+  		} else {//else
+  			if(x_tar>x_ref){//if he righter
+  				return 4;
+  			} else {
+  				return 3;
+  			}
+  		}
 	}//end of getRelativeQuadrant
 }; //end of class
 
