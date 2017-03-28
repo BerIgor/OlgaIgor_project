@@ -29,13 +29,13 @@ def forward (duration):
 	move_cmd = Twist()
 	move_cmd.angular.z = 0
 	x=0.01
-	while x < float(speed):
+	while x < float(lin_speed):
 		move_cmd.linear.x = float(x)
 		x += 0.01
 		cmd_vel.publish(move_cmd)
 		rospy.sleep(0.1)
 	timeout = time.time() + float(duration)
-	move_cmd.linear.x = float(speed)
+	move_cmd.linear.x = float(lin_speed)
 	while True:
 		if time.time() > timeout:
 			break
@@ -54,7 +54,7 @@ def rotate (direction, duration):
 	#print 'This should rotate clockwise at ' + speed + ' radians for second, during ' + duration + ' seconds.'
 	move_cmd = Twist()
 	move_cmd.linear.x = 0
-	move_cmd.angular.z= float(direction)*float(speed)
+	move_cmd.angular.z= float(direction)*float(ang_speed)
 	timeout = time.time() + float(duration)
 	while True:
 		if time.time() > timeout:
