@@ -4,7 +4,11 @@ import subprocess
 import sys
 import os
 
-#in order to run the route planner and complete the 
+"""
+in order to run the route planner and complete the instructions, run this script with following arguments:
+<map_path> <start_x> <start_y> <start_yaw> <goal_x> <goal_y> <map_resolution> <probability_modifier> <length_modifier>
+map resolution is in [cm/pixel]
+"""
 
 if __name__ == "__main__":
 	args = sys.argv
