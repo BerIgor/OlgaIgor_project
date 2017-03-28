@@ -22,7 +22,6 @@
 //for log output
 #include <fstream>
 
-
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 //added for pixel weight optimization
 #include <ompl/base/OptimizationObjective.h>
@@ -30,8 +29,6 @@
 ////////
 #define MAX_COLOR 254
 #define MIN_COLOR 0
-
-
 
 
 
@@ -56,7 +53,6 @@ public:
         const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
         const ompl::PPM::Color &c = ppm_.getPixel(h, w);
 		
-		//TODO: add check that all colors are equal?
 		double weight = MAX_COLOR - c.red;
 		
 		return ob::Cost(weight);
@@ -189,7 +185,6 @@ public:
 		ss_->getSpaceInformation()->setMotionValidator(ob::MotionValidatorPtr(new ob::DiscreteMotionValidator(ss_->getSpaceInformation())));
         ss_->getSpaceInformation()->setStateValidityCheckingResolution(0.0001); //Increasing this value results in larger distance between states
 
-		//TODO finish
 		//Choose the planner
 		ob::Planner* planner;
 		if (!strcmp(plannerName, "prmstar")) {
@@ -238,8 +233,8 @@ public:
 
         // generate a few solutions; all will be added to the goal;        
         for (int i = 0 ; i < iterations ; ++i){
-			std::cout<< "_____________________"<<std::endl;
-			std::cout << "====Iteration "<<i+1<<"===="<<std::endl;
+			//std::cout<< "_____________________"<<std::endl;
+			//std::cout << "====Iteration "<<i+1<<"===="<<std::endl;
             if (ss_->getPlanner()){
                 ss_->getPlanner()->clear();
             }
@@ -310,22 +305,23 @@ public:
 	/*
 	 * getOrders will print to stdout the orders for the robot
 	 */
-	void getOrders(double initialYaw){
+	void getOrders(double initialYaw, char* instructionsFile){
 		og::PathGeometric &p = ss_->getSolutionPath();
-		//TODO: fix. assuming initial orientation is 0
 		double previous_yaw=initialYaw;
 		double yaw;
 
+		std::ofstream outputFile;
+		outputFile.open(instructionsFile);
 
 		//Accessing each waypoint on the path
 		std::vector< ob::State * >& waypoints = p.getStates();
 		for(int i=0; i<waypoints.size()-1; i++){
 			ob::State* state=waypoints[i];
 			ob::State* next_state=waypoints[i+1];
-	        	const double X = (double)state->as<ob::SE2StateSpace::StateType>()->getX();
-            		const double Y = (double)state->as<ob::SE2StateSpace::StateType>()->getY();
-	        	const double next_X = (double)next_state->as<ob::SE2StateSpace::StateType>()->getX();
-	        	const double next_Y = (double)next_state->as<ob::SE2StateSpace::StateType>()->getY();
+        	const double X = (double)state->as<ob::SE2StateSpace::StateType>()->getX();
+        	const double Y = (double)state->as<ob::SE2StateSpace::StateType>()->getY();
+        	const double next_X = (double)next_state->as<ob::SE2StateSpace::StateType>()->getX();
+        	const double next_Y = (double)next_state->as<ob::SE2StateSpace::StateType>()->getY();
 			yaw=yawsVector[i];
 
 			//get the turn
@@ -337,10 +333,14 @@ public:
 			//get distance
 			double distance = sqrt( pow(abs(next_X - X), 2) + pow(abs(next_Y - Y), 2) );
 			
-			std::cout<<"turn "<< turn <<std::endl;
-			std::cout<<"drive "<< distance <<std::endl;
+			outputFile << "turn " << turn << std::endl;
+			outputFile << "drive "<< distance << std::endl;
+			
+			//std::cout<<"turn "<< turn <<std::endl;
+			//std::cout<<"drive "<< distance <<std::endl;
 			previous_yaw=yaw;
-		}		
+		}
+		outputFile.close();
 	}
 
 
@@ -369,7 +369,7 @@ public:
 			ob::State* current_state = waypoints[i];
 			ob::State* next_state = waypoints[i+1];
 	        	const double X = (double)current_state->as<ob::SE2StateSpace::StateType>()->getX();
-            		const double Y = (double)current_state->as<ob::SE2StateSpace::StateType>()->getY();
+            	const double Y = (double)current_state->as<ob::SE2StateSpace::StateType>()->getY();
 	        	const double next_X = (double)next_state->as<ob::SE2StateSpace::StateType>()->getX();
            		const double next_Y = (double)next_state->as<ob::SE2StateSpace::StateType>()->getY();
 			bool is_yaw = false;
@@ -472,23 +472,24 @@ int main(int argc, char **argv){
 	int iterations = std::stoi(argv[11]);
 	double maxIterationDuration = std::stoi(argv[12]);
 
-
-	//TODO is this correct programming?
 	char* log = argv[13];
 	std::ofstream out;
 	out.open(log, std::ios::app);
 
+	char* instructionsFile = argv[14];
 
-	char* outputFile = argv[14];
+	char* outputFile = argv[15];
+
 	const char* type = ".ppm";
 	strcat(outputFile, type);
 
-
-	std::cout<< "file is: " << filename << " ; radius is: " << radius << std::endl;
-	std::cout<<"output file is "<<outputFile<< std::endl;
+	std::cout<< "Input map: " << filename << std::endl;
+	std::cout<<"Output map: "<<outputFile<< std::endl;
+	std::cout<<"Instructions: " << instructionsFile << std::endl;
+	std::cout<< "Radius: " << radius << std::endl;
     Plane2DEnvironment env(filename, radius, probabilityModifier, lengthModifier, plannerName);
 	if (env.plan(startX, startY, startYaw, endX, endY, iterations, maxIterationDuration)){
-		env.getOrders(startYaw);
+		env.getOrders(startYaw, instructionsFile);
         env.recordSolution(250);
         env.save(outputFile);
     }
