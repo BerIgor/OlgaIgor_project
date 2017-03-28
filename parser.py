@@ -8,21 +8,33 @@ import time
 #################
 r = None
 cmd_vel = None
+lin_speed = 0.2
+ang_speed = 1
+res = 1
 #################
 
+def linear_time_calc(length):
+    ac_length = length * res
+    duration = (ac_length - 29) / 18.458
+    return duration
 
-def forward (direction, speed, duration):
+
+def angular_time(angle):
+    return angle / 37.745
+
+
+def forward (duration):
 	print 'This should go forward at ' + speed + ' meters for second, during ' + duration + ' seconds.'
 	move_cmd = Twist()
 	move_cmd.angular.z=0
 	x=0.01
 	while x < float(speed):
-		move_cmd.linear.x = float(direction)*float(x)
+		move_cmd.linear.x = float(x)
 		x += 0.01
 		cmd_vel.publish(move_cmd)
 		rospy.sleep(0.1)
 	timeout = time.time() + float(duration)
-	move_cmd.linear.x = float(direction)*float(speed)
+	move_cmd.linear.x = float(speed)
 	while True:
 		if time.time() > timeout:
 			break
@@ -30,14 +42,14 @@ def forward (direction, speed, duration):
 			cmd_vel.publish(move_cmd)
 			r.sleep()
 	while x > 0:
-		move_cmd.linear.x = float(direction)*float(x)
+		move_cmd.linear.x = float(x)
 		x -= 0.01
 		cmd_vel.publish(move_cmd)
 		rospy.sleep(0.1)
 	cmd_vel.publish(Twist())
 
 
-def rotate (direction, speed, duration):
+def rotate (direction, duration):
 	print 'This should rotate clockwise at ' + speed + ' radians for second, during ' + duration + ' seconds.'
 	move_cmd = Twist()
 	move_cmd.linear.x = 0
@@ -56,10 +68,14 @@ def file__parse(file_path):
 	f = open(file_path)
 	for line in f:
 		line_arr = line.split()
-		if line_arr[0] == 'move':
-			forward(line_arr[1], line_arr[2], line_arr[3])
-		elif line_arr[0] == 'rotate':
-			rotate(line_arr[1], line_arr[2], line_arr[3])
+		if line_arr[0] == 'drive':
+			forward(linear_time_calc(line_arr[1]))
+		elif line_arr[0] == 'turn':
+			if line_arr[1] > 0:
+				direction = 1
+			else:
+				direction = -1
+			rotate(angular_time(abs(line_arr[1])), direction)
 		else:
 			print "The entered command: " + str(line_arr[:])+ " is illegal."
 		rospy.sleep(1)
