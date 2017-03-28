@@ -3,6 +3,7 @@
 import rospy
 from geometry_msgs.msg import Twist
 import time
+import sys
 
 #GLOBAL VARIABLES
 #################
@@ -10,7 +11,7 @@ r = None
 cmd_vel = None
 lin_speed = 0.2
 ang_speed = 1
-res = 1
+res = 1.0
 #################
 
 def linear_time_calc(length):
@@ -24,9 +25,9 @@ def angular_time(angle):
 
 
 def forward (duration):
-	print 'This should go forward at ' + speed + ' meters for second, during ' + duration + ' seconds.'
+	#print 'This should go forward at ' + speed + ' meters for second, during ' + duration + ' seconds.'
 	move_cmd = Twist()
-	move_cmd.angular.z=0
+	move_cmd.angular.z = 0
 	x=0.01
 	while x < float(speed):
 		move_cmd.linear.x = float(x)
@@ -50,7 +51,7 @@ def forward (duration):
 
 
 def rotate (direction, duration):
-	print 'This should rotate clockwise at ' + speed + ' radians for second, during ' + duration + ' seconds.'
+	#print 'This should rotate clockwise at ' + speed + ' radians for second, during ' + duration + ' seconds.'
 	move_cmd = Twist()
 	move_cmd.linear.x = 0
 	move_cmd.angular.z= float(direction)*float(speed)
@@ -75,7 +76,7 @@ def file__parse(file_path):
 				direction = 1
 			else:
 				direction = -1
-			rotate(angular_time(abs(line_arr[1])), direction)
+			rotate(angular_time(abs(float(line_arr[1]))), direction)
 		else:
 			print "The entered command: " + str(line_arr[:])+ " is illegal."
 		rospy.sleep(1)
@@ -95,4 +96,8 @@ if __name__ == "__main__":
 	cmd_vel = rospy.Publisher('cmd_vel_mux/input/navi', Twist, queue_size=10)
 	r = rospy.Rate(10)
 #	rospy.on_shutdown(shutdown())
-	file__parse('corridor2.txt')
+	args = sys.argv
+	command_file = args[1]
+	if args[2]:
+		res = float(args[2])
+	file__parse(command_file)
