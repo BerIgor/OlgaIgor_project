@@ -15,7 +15,7 @@ res = 1.0
 #################
 
 def linear_time_calc(length):
-    ac_length = length * res
+    ac_length = float(length) * res
     duration = (ac_length - 29) / 18.458
     return duration
 
@@ -68,18 +68,19 @@ def rotate (direction, duration):
 def file__parse(file_path):
 	f = open(file_path)
 	for line in f:
-		line_arr = line.split()
-		if line_arr[0] == 'drive':
-			forward(linear_time_calc(line_arr[1]))
-		elif line_arr[0] == 'turn':
-			if line_arr[1] > 0:
-				direction = 1
+		if len(line.strip()) != 0:
+			line_arr = line.split()
+			if line_arr[0] == 'drive':
+				forward(linear_time_calc(line_arr[1]))
+			elif line_arr[0] == 'turn':
+				if line_arr[1] > 0:
+					direction = 1
+				else:
+					direction = -1
+				rotate(angular_time(abs(float(line_arr[1]))), direction)
 			else:
-				direction = -1
-			rotate(angular_time(abs(float(line_arr[1]))), direction)
-		else:
-			print "The entered command: " + str(line_arr[:])+ " is illegal."
-		rospy.sleep(1)
+				print "The entered command: " + str(line_arr[:])+ " is illegal."
+			rospy.sleep(1)
 		
 
 
