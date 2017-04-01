@@ -233,32 +233,34 @@ public:
 
         // generate a few solutions; all will be added to the goal;        
         for (int i = 0 ; i < iterations ; ++i){
-			//std::cout<< "_____________________"<<std::endl;
-			//std::cout << "====Iteration "<<i+1<<"===="<<std::endl;
-            if (ss_->getPlanner()){
-                ss_->getPlanner()->clear();
-            }
-            ss_->solve(attempt_duration);
+		if (!ss_->haveExactSolutionPath()){
+				//std::cout<< "_____________________"<<std::endl;
+				//std::cout << "====Iteration "<<i+1<<"===="<<std::endl;
+		    if (ss_->getPlanner()){
+		        ss_->getPlanner()->clear();
+		    }
+		    ss_->solve(attempt_duration);
 
-			if (ss_->haveExactSolutionPath()){
-				exactSolutions++;
-			}
-			if (ss_->haveSolutionPath()){
-				approxSolutions++;
-			}
-
-			if (ss_->haveSolutionPath()) {
-				double currentCost = ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()).value();
-				std::cout << currentCost << std::endl;
-				//update minimal path cost
-				if(minimalCost > currentCost || minimalCost == -1.0){
-					minimalCost = currentCost;
+				if (ss_->haveExactSolutionPath()){
+					exactSolutions++;
 				}
-				//commented out so we have a clean solution path
-				//this->recordSolution((i+1)*25);
-			}
-        }
-    
+				if (ss_->haveSolutionPath()){
+					approxSolutions++;
+				}
+
+				if (ss_->haveSolutionPath()) {
+					double currentCost = ss_->getProblemDefinition()->getSolutionPath()->cost(ss_->getProblemDefinition()->getOptimizationObjective()).value();
+					std::cout << currentCost << std::endl;
+					//update minimal path cost
+					if(minimalCost > currentCost || minimalCost == -1.0){
+						minimalCost = currentCost;
+					}
+					//commented out so we have a clean solution path
+					//this->recordSolution((i+1)*25);
+				}
+		}
+	}
+	    
         const std::size_t ns = ss_->getProblemDefinition()->getSolutionCount();
         OMPL_INFORM("Found %d solutions", (int)ns);
         if (ss_->haveSolutionPath()){
