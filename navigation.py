@@ -26,8 +26,8 @@ if __name__ == "__main__":
 	prog = os.path.join(file_dir, "a.out")
 	radius = str(17 / float(resolution))
 	planner = "trrt"
-	iteration_count = "3"
-	time_per_iteration = "2"
+	iteration_count = "10"
+	time_per_iteration = "10"
 	output_log_file = "log_new"
 	output_ppm_file = "map_result"
 	instruction_file = "instructions.txt"

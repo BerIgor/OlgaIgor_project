@@ -41,19 +41,40 @@ private:
 	ompl::PPM ppm_;
 	double mod_;
 	double startYaw;
+	int robotRadius_;
 
 public:
-	MyStateCostIntegralObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm) : ob::StateCostIntegralObjective(si, true) {
+	MyStateCostIntegralObjective(const ob::SpaceInformationPtr& si, ompl::PPM ppm, int robotRadius) : ob::StateCostIntegralObjective(si, true) {
 		description_="rgb based state weight";
 		ppm_ = ppm;
+		robotRadius_ = robotRadius;
 	}
 
 	ob::Cost stateCost(const ob::State* state) const {		
-        const int w = (int)state->as<ob::SE2StateSpace::StateType>()->getX();
-        const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
-        const ompl::PPM::Color &c = ppm_.getPixel(h, w);
+        	const int w = (int)state->as<ob::SE2StateSpace::StateType>()->getX();
+        	const int h = (int)state->as<ob::SE2StateSpace::StateType>()->getY();
+		int maxWidth_ = ppm_.getWidth() - 1;
+		int maxHeight_ = ppm_.getHeight() - 1;
+        	
 		
-		double weight = MAX_COLOR - c.red;
+		double weight = 0.0;
+		for(int x = w - robotRadius_; x <= w + robotRadius_; x++){
+			if(x > maxWidth_ || x<0) {
+				continue;
+			}
+			//for all y
+			for(int y = h - robotRadius_; y <= h + robotRadius_; y++){
+				if(y > maxHeight_ || y<0) {
+					continue;
+				}
+
+				//get color
+				const ompl::PPM::Color &c = ppm_.getPixel(y, x);
+				weight += MAX_COLOR - c.red;
+			}
+		}
+		weight = weight/(robotRadius_^2);
+		weight = weight/MAX_COLOR;
 		
 		return ob::Cost(weight);
 	}
@@ -204,7 +225,7 @@ public:
 
 		ss_->setPlanner(ob::PlannerPtr(planner));
 
-		ob::OptimizationObjectivePtr obj1p(new MyStateCostIntegralObjective(ss_->getSpaceInformation(), ppm_));
+		ob::OptimizationObjectivePtr obj1p(new MyStateCostIntegralObjective(ss_->getSpaceInformation(), ppm_, robotRadius_));
 		ob::OptimizationObjectivePtr obj2p(new ob::PathLengthOptimizationObjective(ss_->getSpaceInformation()));
 		ob::MultiOptimizationObjective* moo = new ob::MultiOptimizationObjective(ss_->getSpaceInformation());
 		moo->addObjective(obj1p, probabilityModifier);
